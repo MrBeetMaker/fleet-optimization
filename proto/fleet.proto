@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package fleet;
+
+option go_package = "github.com/MrBeetMaker/fleet-optimization/proto;fleetpb";
+
+service FleetService {
+    rpc RegisterTruck(RegisterRequest)
+        returns (RegisterResponse);
+
+    rpc SendTelemetry(Telemetry)
+        returns (Command);
+}
+
+message RegisterRequest{
+    int32 truck_id = 1;
+}
+
+message RegisterResponse{
+    bool accepted = 1;
+}
+
+message Telemetry{
+    int32 truck_id = 1;
+    double x = 2;
+    double y = 3;
+    double battery = 4;
+    int64 timestamp = 5;
+}
+
+enum CommandType{
+    NONE = 0;
+    STOP = 1;
+    CONTINUE = 2;
+    NEW_ROUTE = 3;
+}
+
+message Command{
+    CommandType type = 1;
+    repeated int32 route = 2;
+}
