@@ -1,0 +1,146 @@
+# Go
+
+/bin/
+/dist/
+/build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go tooling
+
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+vendor/
+go.work
+go.work.sum
+
+# Environment / secrets
+
+.env
+.env.*
+!.env.example
+
+# IDE / editors
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python
+
+**pycache**/
+*.py[cod]
+*$py.class
+*.so
+
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python tooling
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.pybuilder/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+.ipynb_checkpoints/
+
+# Python build / packaging
+
+.Python
+build/
+dist/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+*.egg
+MANIFEST
+
+# Jupyter / IPython
+
+profile_default/
+ipython_config.py
+
+# PyInstaller
+
+*.manifest
+*.spec
+
+# Python logs
+
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Node / frontend
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Frontend build output
+
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# Local databases
+
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+
+*.log
+
+# Temporary files
+
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Local / tool-specific files
+
+tempCodeRunnerFile.py
+.pdm-python
+.pdm-build/
+.pixi/
+**pypackages**/
+.streamlit/secrets.toml
+.streamlit/secrets.toml
