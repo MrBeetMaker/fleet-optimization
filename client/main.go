@@ -21,7 +21,7 @@ const (
 	DELIVERING
 )
 
-var stateName = map[TruckState]string{
+var StateName = map[TruckState]string{
 	IDLE:       "idle",
 	DRIVING:    "driving",
 	CHARGING:   "charging",
@@ -39,12 +39,15 @@ type Truck struct {
 	storageCapacity int
 	orders          []int
 
-	status TruckState
+	destX float64
+	destY float64
+
+	State  TruckState
 	client fleetpb.FleetServiceClient
 }
 
 func (ss TruckState) String() string {
-	return stateName[ss]
+	return StateName[ss]
 }
 
 func (t *Truck) SendTelemetry() {
@@ -56,6 +59,7 @@ func (t *Truck) SendTelemetry() {
 			X:         t.x,
 			Y:         t.y,
 			Battery:   t.battery,
+			State:     int32(t.State),
 			Timestamp: time.Now().Unix(),
 		},
 	)
@@ -100,6 +104,10 @@ func (t *Truck) Register() {
 	}
 
 	log.Println("Registered:", resp.Accepted)
+
+	for id, point := range resp.Points {
+		log.Printf("Point %d: x=%d y=%d", id, point.X, point.Y)
+	}
 }
 
 func (t *Truck) HandleCommand(cmd *fleetpb.Command) {
@@ -107,10 +115,10 @@ func (t *Truck) HandleCommand(cmd *fleetpb.Command) {
 	switch cmd.Type {
 
 	case fleetpb.CommandType_STOP:
-		t.status = WAITING
+		t.State = WAITING
 
 	case fleetpb.CommandType_CONTINUE:
-		t.status = DRIVING
+		t.State = DRIVING
 
 	case fleetpb.CommandType_NEW_ROUTE:
 		log.Println("Received new route:", cmd.Route)
@@ -135,10 +143,9 @@ func (t *Truck) Run() {
 	defer ticker.Stop()
 
 	for range ticker.C {
+		t.SendTelemetry()
 
 		t.drive()
-
-		t.SendTelemetry()
 	}
 }
 

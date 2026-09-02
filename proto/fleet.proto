@@ -12,30 +12,37 @@ service FleetService {
         returns (Command);
 }
 
-message RegisterRequest{
+message Point {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+message RegisterRequest {
     int32 truck_id = 1;
 }
 
-message RegisterResponse{
+message RegisterResponse {
     bool accepted = 1;
+    map<int32, Point> points = 2;
 }
 
-message Telemetry{
-    int32 truck_id = 1;
+message Telemetry {
+    int32  truck_id = 1;
     double x = 2;
     double y = 3;
     double battery = 4;
-    int64 timestamp = 5;
+    int32  State = 5;
+    int64  timestamp = 6;
 }
 
-enum CommandType{
+enum CommandType {
     NONE = 0;
     STOP = 1;
     CONTINUE = 2;
     NEW_ROUTE = 3;
 }
 
-message Command{
+message Command {
     CommandType type = 1;
     repeated int32 route = 2;
 }

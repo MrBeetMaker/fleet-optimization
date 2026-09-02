@@ -73,6 +73,58 @@ func (CommandType) EnumDescriptor() ([]byte, []int) {
 	return file_proto_fleet_proto_rawDescGZIP(), []int{0}
 }
 
+type Point struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	X             int32                  `protobuf:"varint,1,opt,name=x,proto3" json:"x,omitempty"`
+	Y             int32                  `protobuf:"varint,2,opt,name=y,proto3" json:"y,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Point) Reset() {
+	*x = Point{}
+	mi := &file_proto_fleet_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Point) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Point) ProtoMessage() {}
+
+func (x *Point) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_fleet_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Point.ProtoReflect.Descriptor instead.
+func (*Point) Descriptor() ([]byte, []int) {
+	return file_proto_fleet_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Point) GetX() int32 {
+	if x != nil {
+		return x.X
+	}
+	return 0
+}
+
+func (x *Point) GetY() int32 {
+	if x != nil {
+		return x.Y
+	}
+	return 0
+}
+
 type RegisterRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TruckId       int32                  `protobuf:"varint,1,opt,name=truck_id,json=truckId,proto3" json:"truck_id,omitempty"`
@@ -82,7 +134,7 @@ type RegisterRequest struct {
 
 func (x *RegisterRequest) Reset() {
 	*x = RegisterRequest{}
-	mi := &file_proto_fleet_proto_msgTypes[0]
+	mi := &file_proto_fleet_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -94,7 +146,7 @@ func (x *RegisterRequest) String() string {
 func (*RegisterRequest) ProtoMessage() {}
 
 func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_fleet_proto_msgTypes[0]
+	mi := &file_proto_fleet_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -107,7 +159,7 @@ func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return file_proto_fleet_proto_rawDescGZIP(), []int{0}
+	return file_proto_fleet_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *RegisterRequest) GetTruckId() int32 {
@@ -120,13 +172,14 @@ func (x *RegisterRequest) GetTruckId() int32 {
 type RegisterResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	Points        map[int32]*Point       `protobuf:"bytes,2,rep,name=points,proto3" json:"points,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RegisterResponse) Reset() {
 	*x = RegisterResponse{}
-	mi := &file_proto_fleet_proto_msgTypes[1]
+	mi := &file_proto_fleet_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -138,7 +191,7 @@ func (x *RegisterResponse) String() string {
 func (*RegisterResponse) ProtoMessage() {}
 
 func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_fleet_proto_msgTypes[1]
+	mi := &file_proto_fleet_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -151,7 +204,7 @@ func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterResponse.ProtoReflect.Descriptor instead.
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return file_proto_fleet_proto_rawDescGZIP(), []int{1}
+	return file_proto_fleet_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *RegisterResponse) GetAccepted() bool {
@@ -161,20 +214,28 @@ func (x *RegisterResponse) GetAccepted() bool {
 	return false
 }
 
+func (x *RegisterResponse) GetPoints() map[int32]*Point {
+	if x != nil {
+		return x.Points
+	}
+	return nil
+}
+
 type Telemetry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TruckId       int32                  `protobuf:"varint,1,opt,name=truck_id,json=truckId,proto3" json:"truck_id,omitempty"`
 	X             float64                `protobuf:"fixed64,2,opt,name=x,proto3" json:"x,omitempty"`
 	Y             float64                `protobuf:"fixed64,3,opt,name=y,proto3" json:"y,omitempty"`
 	Battery       float64                `protobuf:"fixed64,4,opt,name=battery,proto3" json:"battery,omitempty"`
-	Timestamp     int64                  `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	State         int32                  `protobuf:"varint,5,opt,name=State,proto3" json:"State,omitempty"`
+	Timestamp     int64                  `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Telemetry) Reset() {
 	*x = Telemetry{}
-	mi := &file_proto_fleet_proto_msgTypes[2]
+	mi := &file_proto_fleet_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -186,7 +247,7 @@ func (x *Telemetry) String() string {
 func (*Telemetry) ProtoMessage() {}
 
 func (x *Telemetry) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_fleet_proto_msgTypes[2]
+	mi := &file_proto_fleet_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -199,7 +260,7 @@ func (x *Telemetry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Telemetry.ProtoReflect.Descriptor instead.
 func (*Telemetry) Descriptor() ([]byte, []int) {
-	return file_proto_fleet_proto_rawDescGZIP(), []int{2}
+	return file_proto_fleet_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Telemetry) GetTruckId() int32 {
@@ -230,6 +291,13 @@ func (x *Telemetry) GetBattery() float64 {
 	return 0
 }
 
+func (x *Telemetry) GetState() int32 {
+	if x != nil {
+		return x.State
+	}
+	return 0
+}
+
 func (x *Telemetry) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
@@ -247,7 +315,7 @@ type Command struct {
 
 func (x *Command) Reset() {
 	*x = Command{}
-	mi := &file_proto_fleet_proto_msgTypes[3]
+	mi := &file_proto_fleet_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -259,7 +327,7 @@ func (x *Command) String() string {
 func (*Command) ProtoMessage() {}
 
 func (x *Command) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_fleet_proto_msgTypes[3]
+	mi := &file_proto_fleet_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -272,7 +340,7 @@ func (x *Command) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Command.ProtoReflect.Descriptor instead.
 func (*Command) Descriptor() ([]byte, []int) {
-	return file_proto_fleet_proto_rawDescGZIP(), []int{3}
+	return file_proto_fleet_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Command) GetType() CommandType {
@@ -293,17 +361,25 @@ var File_proto_fleet_proto protoreflect.FileDescriptor
 
 const file_proto_fleet_proto_rawDesc = "" +
 	"\n" +
-	"\x11proto/fleet.proto\x12\x05fleet\",\n" +
+	"\x11proto/fleet.proto\x12\x05fleet\"#\n" +
+	"\x05Point\x12\f\n" +
+	"\x01x\x18\x01 \x01(\x05R\x01x\x12\f\n" +
+	"\x01y\x18\x02 \x01(\x05R\x01y\",\n" +
 	"\x0fRegisterRequest\x12\x19\n" +
-	"\btruck_id\x18\x01 \x01(\x05R\atruckId\".\n" +
+	"\btruck_id\x18\x01 \x01(\x05R\atruckId\"\xb4\x01\n" +
 	"\x10RegisterResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\bR\baccepted\"z\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\x12;\n" +
+	"\x06points\x18\x02 \x03(\v2#.fleet.RegisterResponse.PointsEntryR\x06points\x1aG\n" +
+	"\vPointsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\"\n" +
+	"\x05value\x18\x02 \x01(\v2\f.fleet.PointR\x05value:\x028\x01\"\x90\x01\n" +
 	"\tTelemetry\x12\x19\n" +
 	"\btruck_id\x18\x01 \x01(\x05R\atruckId\x12\f\n" +
 	"\x01x\x18\x02 \x01(\x01R\x01x\x12\f\n" +
 	"\x01y\x18\x03 \x01(\x01R\x01y\x12\x18\n" +
-	"\abattery\x18\x04 \x01(\x01R\abattery\x12\x1c\n" +
-	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\"G\n" +
+	"\abattery\x18\x04 \x01(\x01R\abattery\x12\x14\n" +
+	"\x05State\x18\x05 \x01(\x05R\x05State\x12\x1c\n" +
+	"\ttimestamp\x18\x06 \x01(\x03R\ttimestamp\"G\n" +
 	"\aCommand\x12&\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x12.fleet.CommandTypeR\x04type\x12\x14\n" +
 	"\x05route\x18\x02 \x03(\x05R\x05route*>\n" +
@@ -329,25 +405,29 @@ func file_proto_fleet_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_fleet_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_fleet_proto_goTypes = []any{
 	(CommandType)(0),         // 0: fleet.CommandType
-	(*RegisterRequest)(nil),  // 1: fleet.RegisterRequest
-	(*RegisterResponse)(nil), // 2: fleet.RegisterResponse
-	(*Telemetry)(nil),        // 3: fleet.Telemetry
-	(*Command)(nil),          // 4: fleet.Command
+	(*Point)(nil),            // 1: fleet.Point
+	(*RegisterRequest)(nil),  // 2: fleet.RegisterRequest
+	(*RegisterResponse)(nil), // 3: fleet.RegisterResponse
+	(*Telemetry)(nil),        // 4: fleet.Telemetry
+	(*Command)(nil),          // 5: fleet.Command
+	nil,                      // 6: fleet.RegisterResponse.PointsEntry
 }
 var file_proto_fleet_proto_depIdxs = []int32{
-	0, // 0: fleet.Command.type:type_name -> fleet.CommandType
-	1, // 1: fleet.FleetService.RegisterTruck:input_type -> fleet.RegisterRequest
-	3, // 2: fleet.FleetService.SendTelemetry:input_type -> fleet.Telemetry
-	2, // 3: fleet.FleetService.RegisterTruck:output_type -> fleet.RegisterResponse
-	4, // 4: fleet.FleetService.SendTelemetry:output_type -> fleet.Command
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	6, // 0: fleet.RegisterResponse.points:type_name -> fleet.RegisterResponse.PointsEntry
+	0, // 1: fleet.Command.type:type_name -> fleet.CommandType
+	1, // 2: fleet.RegisterResponse.PointsEntry.value:type_name -> fleet.Point
+	2, // 3: fleet.FleetService.RegisterTruck:input_type -> fleet.RegisterRequest
+	4, // 4: fleet.FleetService.SendTelemetry:input_type -> fleet.Telemetry
+	3, // 5: fleet.FleetService.RegisterTruck:output_type -> fleet.RegisterResponse
+	5, // 6: fleet.FleetService.SendTelemetry:output_type -> fleet.Command
+	5, // [5:7] is the sub-list for method output_type
+	3, // [3:5] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proto_fleet_proto_init() }
@@ -361,7 +441,7 @@ func file_proto_fleet_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_fleet_proto_rawDesc), len(file_proto_fleet_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
