@@ -13,8 +13,8 @@ service FleetService {
 }
 
 message Point {
-  int32 x = 1;
-  int32 y = 2;
+  float x = 1;
+  float y = 2;
 }
 
 message RegisterRequest {
@@ -26,13 +26,21 @@ message RegisterResponse {
     map<int32, Point> points = 2;
 }
 
+enum TruckState {
+  IDLE = 0;
+  DRIVING = 1;
+  CHARGING = 2;
+  WAITING = 3;
+  DELIVERING = 4;
+}
+
 message Telemetry {
-    int32  truck_id = 1;
-    double x = 2;
-    double y = 3;
-    double battery = 4;
-    int32  State = 5;
-    int64  timestamp = 6;
+  int32 truck_id = 1;
+  double x = 2;
+  double y = 3;
+  double battery = 4;
+  TruckState state = 5;
+  int64 timestamp = 6;
 }
 
 enum CommandType {

@@ -21,6 +21,61 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type TruckState int32
+
+const (
+	TruckState_IDLE       TruckState = 0
+	TruckState_DRIVING    TruckState = 1
+	TruckState_CHARGING   TruckState = 2
+	TruckState_WAITING    TruckState = 3
+	TruckState_DELIVERING TruckState = 4
+)
+
+// Enum value maps for TruckState.
+var (
+	TruckState_name = map[int32]string{
+		0: "IDLE",
+		1: "DRIVING",
+		2: "CHARGING",
+		3: "WAITING",
+		4: "DELIVERING",
+	}
+	TruckState_value = map[string]int32{
+		"IDLE":       0,
+		"DRIVING":    1,
+		"CHARGING":   2,
+		"WAITING":    3,
+		"DELIVERING": 4,
+	}
+)
+
+func (x TruckState) Enum() *TruckState {
+	p := new(TruckState)
+	*p = x
+	return p
+}
+
+func (x TruckState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TruckState) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_fleet_proto_enumTypes[0].Descriptor()
+}
+
+func (TruckState) Type() protoreflect.EnumType {
+	return &file_proto_fleet_proto_enumTypes[0]
+}
+
+func (x TruckState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TruckState.Descriptor instead.
+func (TruckState) EnumDescriptor() ([]byte, []int) {
+	return file_proto_fleet_proto_rawDescGZIP(), []int{0}
+}
+
 type CommandType int32
 
 const (
@@ -57,11 +112,11 @@ func (x CommandType) String() string {
 }
 
 func (CommandType) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_fleet_proto_enumTypes[0].Descriptor()
+	return file_proto_fleet_proto_enumTypes[1].Descriptor()
 }
 
 func (CommandType) Type() protoreflect.EnumType {
-	return &file_proto_fleet_proto_enumTypes[0]
+	return &file_proto_fleet_proto_enumTypes[1]
 }
 
 func (x CommandType) Number() protoreflect.EnumNumber {
@@ -70,13 +125,13 @@ func (x CommandType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use CommandType.Descriptor instead.
 func (CommandType) EnumDescriptor() ([]byte, []int) {
-	return file_proto_fleet_proto_rawDescGZIP(), []int{0}
+	return file_proto_fleet_proto_rawDescGZIP(), []int{1}
 }
 
 type Point struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	X             int32                  `protobuf:"varint,1,opt,name=x,proto3" json:"x,omitempty"`
-	Y             int32                  `protobuf:"varint,2,opt,name=y,proto3" json:"y,omitempty"`
+	X             float32                `protobuf:"fixed32,1,opt,name=x,proto3" json:"x,omitempty"`
+	Y             float32                `protobuf:"fixed32,2,opt,name=y,proto3" json:"y,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -111,14 +166,14 @@ func (*Point) Descriptor() ([]byte, []int) {
 	return file_proto_fleet_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Point) GetX() int32 {
+func (x *Point) GetX() float32 {
 	if x != nil {
 		return x.X
 	}
 	return 0
 }
 
-func (x *Point) GetY() int32 {
+func (x *Point) GetY() float32 {
 	if x != nil {
 		return x.Y
 	}
@@ -227,7 +282,7 @@ type Telemetry struct {
 	X             float64                `protobuf:"fixed64,2,opt,name=x,proto3" json:"x,omitempty"`
 	Y             float64                `protobuf:"fixed64,3,opt,name=y,proto3" json:"y,omitempty"`
 	Battery       float64                `protobuf:"fixed64,4,opt,name=battery,proto3" json:"battery,omitempty"`
-	State         int32                  `protobuf:"varint,5,opt,name=State,proto3" json:"State,omitempty"`
+	State         TruckState             `protobuf:"varint,5,opt,name=state,proto3,enum=fleet.TruckState" json:"state,omitempty"`
 	Timestamp     int64                  `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -291,11 +346,11 @@ func (x *Telemetry) GetBattery() float64 {
 	return 0
 }
 
-func (x *Telemetry) GetState() int32 {
+func (x *Telemetry) GetState() TruckState {
 	if x != nil {
 		return x.State
 	}
-	return 0
+	return TruckState_IDLE
 }
 
 func (x *Telemetry) GetTimestamp() int64 {
@@ -363,8 +418,8 @@ const file_proto_fleet_proto_rawDesc = "" +
 	"\n" +
 	"\x11proto/fleet.proto\x12\x05fleet\"#\n" +
 	"\x05Point\x12\f\n" +
-	"\x01x\x18\x01 \x01(\x05R\x01x\x12\f\n" +
-	"\x01y\x18\x02 \x01(\x05R\x01y\",\n" +
+	"\x01x\x18\x01 \x01(\x02R\x01x\x12\f\n" +
+	"\x01y\x18\x02 \x01(\x02R\x01y\",\n" +
 	"\x0fRegisterRequest\x12\x19\n" +
 	"\btruck_id\x18\x01 \x01(\x05R\atruckId\"\xb4\x01\n" +
 	"\x10RegisterResponse\x12\x1a\n" +
@@ -372,17 +427,25 @@ const file_proto_fleet_proto_rawDesc = "" +
 	"\x06points\x18\x02 \x03(\v2#.fleet.RegisterResponse.PointsEntryR\x06points\x1aG\n" +
 	"\vPointsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\"\n" +
-	"\x05value\x18\x02 \x01(\v2\f.fleet.PointR\x05value:\x028\x01\"\x90\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\f.fleet.PointR\x05value:\x028\x01\"\xa3\x01\n" +
 	"\tTelemetry\x12\x19\n" +
 	"\btruck_id\x18\x01 \x01(\x05R\atruckId\x12\f\n" +
 	"\x01x\x18\x02 \x01(\x01R\x01x\x12\f\n" +
 	"\x01y\x18\x03 \x01(\x01R\x01y\x12\x18\n" +
-	"\abattery\x18\x04 \x01(\x01R\abattery\x12\x14\n" +
-	"\x05State\x18\x05 \x01(\x05R\x05State\x12\x1c\n" +
+	"\abattery\x18\x04 \x01(\x01R\abattery\x12'\n" +
+	"\x05state\x18\x05 \x01(\x0e2\x11.fleet.TruckStateR\x05state\x12\x1c\n" +
 	"\ttimestamp\x18\x06 \x01(\x03R\ttimestamp\"G\n" +
 	"\aCommand\x12&\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x12.fleet.CommandTypeR\x04type\x12\x14\n" +
-	"\x05route\x18\x02 \x03(\x05R\x05route*>\n" +
+	"\x05route\x18\x02 \x03(\x05R\x05route*N\n" +
+	"\n" +
+	"TruckState\x12\b\n" +
+	"\x04IDLE\x10\x00\x12\v\n" +
+	"\aDRIVING\x10\x01\x12\f\n" +
+	"\bCHARGING\x10\x02\x12\v\n" +
+	"\aWAITING\x10\x03\x12\x0e\n" +
+	"\n" +
+	"DELIVERING\x10\x04*>\n" +
 	"\vCommandType\x12\b\n" +
 	"\x04NONE\x10\x00\x12\b\n" +
 	"\x04STOP\x10\x01\x12\f\n" +
@@ -404,30 +467,32 @@ func file_proto_fleet_proto_rawDescGZIP() []byte {
 	return file_proto_fleet_proto_rawDescData
 }
 
-var file_proto_fleet_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_proto_fleet_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_proto_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_fleet_proto_goTypes = []any{
-	(CommandType)(0),         // 0: fleet.CommandType
-	(*Point)(nil),            // 1: fleet.Point
-	(*RegisterRequest)(nil),  // 2: fleet.RegisterRequest
-	(*RegisterResponse)(nil), // 3: fleet.RegisterResponse
-	(*Telemetry)(nil),        // 4: fleet.Telemetry
-	(*Command)(nil),          // 5: fleet.Command
-	nil,                      // 6: fleet.RegisterResponse.PointsEntry
+	(TruckState)(0),          // 0: fleet.TruckState
+	(CommandType)(0),         // 1: fleet.CommandType
+	(*Point)(nil),            // 2: fleet.Point
+	(*RegisterRequest)(nil),  // 3: fleet.RegisterRequest
+	(*RegisterResponse)(nil), // 4: fleet.RegisterResponse
+	(*Telemetry)(nil),        // 5: fleet.Telemetry
+	(*Command)(nil),          // 6: fleet.Command
+	nil,                      // 7: fleet.RegisterResponse.PointsEntry
 }
 var file_proto_fleet_proto_depIdxs = []int32{
-	6, // 0: fleet.RegisterResponse.points:type_name -> fleet.RegisterResponse.PointsEntry
-	0, // 1: fleet.Command.type:type_name -> fleet.CommandType
-	1, // 2: fleet.RegisterResponse.PointsEntry.value:type_name -> fleet.Point
-	2, // 3: fleet.FleetService.RegisterTruck:input_type -> fleet.RegisterRequest
-	4, // 4: fleet.FleetService.SendTelemetry:input_type -> fleet.Telemetry
-	3, // 5: fleet.FleetService.RegisterTruck:output_type -> fleet.RegisterResponse
-	5, // 6: fleet.FleetService.SendTelemetry:output_type -> fleet.Command
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	7, // 0: fleet.RegisterResponse.points:type_name -> fleet.RegisterResponse.PointsEntry
+	0, // 1: fleet.Telemetry.state:type_name -> fleet.TruckState
+	1, // 2: fleet.Command.type:type_name -> fleet.CommandType
+	2, // 3: fleet.RegisterResponse.PointsEntry.value:type_name -> fleet.Point
+	3, // 4: fleet.FleetService.RegisterTruck:input_type -> fleet.RegisterRequest
+	5, // 5: fleet.FleetService.SendTelemetry:input_type -> fleet.Telemetry
+	4, // 6: fleet.FleetService.RegisterTruck:output_type -> fleet.RegisterResponse
+	6, // 7: fleet.FleetService.SendTelemetry:output_type -> fleet.Command
+	6, // [6:8] is the sub-list for method output_type
+	4, // [4:6] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_proto_fleet_proto_init() }
@@ -440,7 +505,7 @@ func file_proto_fleet_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_fleet_proto_rawDesc), len(file_proto_fleet_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
