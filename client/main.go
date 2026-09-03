@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"log"
+	"math"
+	"sync"
 	"time"
 
 	fleetpb "github.com/MrBeetMaker/fleet-optimization/proto"
@@ -10,24 +12,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
-
-type TruckState int
-
-const (
-	IDLE TruckState = iota
-	DRIVING
-	CHARGING
-	WAITING
-	DELIVERING
-)
-
-var StateName = map[TruckState]string{
-	IDLE:       "idle",
-	DRIVING:    "driving",
-	CHARGING:   "charging",
-	WAITING:    "waiting",
-	DELIVERING: "delivering",
-}
 
 type Truck struct {
 	id int32
@@ -42,12 +26,11 @@ type Truck struct {
 	destX float64
 	destY float64
 
-	State  TruckState
-	client fleetpb.FleetServiceClient
-}
+	route   []int32 // Nods id's
+	nodeMap map[int32]*fleetpb.Point
 
-func (ss TruckState) String() string {
-	return StateName[ss]
+	State  fleetpb.TruckState
+	client fleetpb.FleetServiceClient
 }
 
 func (t *Truck) SendTelemetry() {
@@ -59,7 +42,7 @@ func (t *Truck) SendTelemetry() {
 			X:         t.x,
 			Y:         t.y,
 			Battery:   t.battery,
-			State:     int32(t.State),
+			State:     t.State,
 			Timestamp: time.Now().Unix(),
 		},
 	)
@@ -86,6 +69,12 @@ func NewTruck(id int32) *Truck {
 	return &Truck{
 		id:      id,
 		battery: 100,
+		x:       0,
+		y:       0,
+		destX:   0,
+		destY:   0,
+		nodeMap: make(map[int32]*fleetpb.Point),
+		route:   make([]int32, 0),
 		client:  fleetpb.NewFleetServiceClient(conn),
 	}
 }
@@ -106,7 +95,8 @@ func (t *Truck) Register() {
 	log.Println("Registered:", resp.Accepted)
 
 	for id, point := range resp.Points {
-		log.Printf("Point %d: x=%d y=%d", id, point.X, point.Y)
+		// log.Printf("Point %d: x=%f y=%f", id, point.X, point.Y)
+		t.nodeMap[id] = point
 	}
 }
 
@@ -115,30 +105,81 @@ func (t *Truck) HandleCommand(cmd *fleetpb.Command) {
 	switch cmd.Type {
 
 	case fleetpb.CommandType_STOP:
-		t.State = WAITING
+		t.State = fleetpb.TruckState_WAITING
 
 	case fleetpb.CommandType_CONTINUE:
-		t.State = DRIVING
+		t.State = fleetpb.TruckState_DRIVING
 
 	case fleetpb.CommandType_NEW_ROUTE:
 		log.Println("Received new route:", cmd.Route)
+		t.State = fleetpb.TruckState_DRIVING
+
+		// Append new route
+		for i := range cmd.Route {
+			t.route = append(t.route, cmd.Route[int32(i)])
+		}
 	}
+}
+
+// Attempts to set next node in route as destionation, and set state to driving.
+// Sets state to idle if route is empty.
+func (t *Truck) nextDestination() {
+
+	if len(t.route) <= 1 {
+		log.Printf("Truck %d has no route (IDLE).", t.id)
+		t.State = fleetpb.TruckState_IDLE
+		return
+	}
+
+	t.route = t.route[1:] // Pop previous destination
+
+	nodeId := t.route[0]
+	dest := t.nodeMap[nodeId]
+
+	t.destX = float64(dest.X)
+	t.destY = float64(dest.Y)
+
+	t.State = fleetpb.TruckState_DRIVING
+	log.Printf("Truck %d is driving to node %d at (%f, %f)", t.id, nodeId, t.destX, t.destY)
 }
 
 func (t *Truck) drive() {
 
-	t.x += 1
+	dx := t.destX - t.x
+	dy := t.destY - t.y
 
-	t.y += 0.5
+	norm := math.Sqrt(dx*dx + dy*dy)
 
-	t.battery -= 0.2
+	speed := 0.1
+
+	if norm < speed || norm == 0 { // Arrived at destination
+		log.Printf("Truck %d at (%f, %f) has arrived at destination (%f, %f)", t.id, t.x, t.y, t.destX, t.destY)
+		t.State = fleetpb.TruckState_WAITING
+
+		time.Sleep(time.Second)
+
+		t.nextDestination()
+
+		// Print both truck position and destination for now.
+
+		return
+	}
+
+	dx = dx * speed / norm
+	dy = dy * speed / norm
+
+	t.x += dx
+	t.y += dy
+
+	t.battery -= speed * float64(1+len(t.orders)) // Placeholder battery cost
+
 }
 
 func (t *Truck) Run() {
 
 	t.Register()
 
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(time.Second / 10)
 
 	defer ticker.Stop()
 
@@ -151,7 +192,14 @@ func (t *Truck) Run() {
 
 func main() {
 
-	truck := NewTruck(1)
+	var wg sync.WaitGroup
 
-	truck.Run()
+	nrOfTrucks := 3
+	for i := range nrOfTrucks {
+		go NewTruck(int32(i)).Run()
+		wg.Add(1)
+	}
+
+	wg.Wait()
+
 }
