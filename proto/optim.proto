@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package fleet;
+
+import "fleet.proto";
+
+option go_package = "github.com/MrBeetMaker/fleet-optimization/proto;fleetpb";
+
+service OptimizerService {
+
+    rpc CreateRoute(CreateRouteRequest)
+        returns (CreateRouteResponse);
+}
+
+message CreateRouteRequest {
+    repeated fleet.Order orders = 1;
+    map<int32, fleet.Point> points = 2;
+    int32 nrOfTrucks = 3;
+}
+
+message OrderIds {
+    repeated int64 ids = 1;
+}
+
+message CreateRouteResponse {
+    map<int32, fleet.Route> routes = 1;
+    map<int32, OrderIds> order_ids = 2;       // RouteId -> list of order id's
+
+}
+
