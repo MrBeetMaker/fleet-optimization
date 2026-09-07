@@ -1,0 +1,7 @@
+Run all of these in separate terminals:
+
+go run ./client
+go run ./server
+$env:PYTHONPATH="proto"; 
+
+.\.venv\Scripts\python.exe -m optimizer.main
