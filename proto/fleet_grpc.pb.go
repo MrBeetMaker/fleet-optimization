@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.2
 // - protoc             v7.36.0
-// source: proto/fleet.proto
+// source: fleet.proto
 
 package fleetpb
 
@@ -19,8 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	FleetService_RegisterTruck_FullMethodName = "/fleet.FleetService/RegisterTruck"
-	FleetService_SendTelemetry_FullMethodName = "/fleet.FleetService/SendTelemetry"
+	FleetService_RegisterTruck_FullMethodName   = "/fleet.FleetService/RegisterTruck"
+	FleetService_SendTelemetry_FullMethodName   = "/fleet.FleetService/SendTelemetry"
+	FleetService_RequestPickup_FullMethodName   = "/fleet.FleetService/RequestPickup"
+	FleetService_RequestDelivery_FullMethodName = "/fleet.FleetService/RequestDelivery"
 )
 
 // FleetServiceClient is the client API for FleetService service.
@@ -29,6 +31,8 @@ const (
 type FleetServiceClient interface {
 	RegisterTruck(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	SendTelemetry(ctx context.Context, in *Telemetry, opts ...grpc.CallOption) (*Command, error)
+	RequestPickup(ctx context.Context, in *PickUpRequest, opts ...grpc.CallOption) (*PickUpResponse, error)
+	RequestDelivery(ctx context.Context, in *DeliverRequest, opts ...grpc.CallOption) (*DeliverResponse, error)
 }
 
 type fleetServiceClient struct {
@@ -59,12 +63,34 @@ func (c *fleetServiceClient) SendTelemetry(ctx context.Context, in *Telemetry, o
 	return out, nil
 }
 
+func (c *fleetServiceClient) RequestPickup(ctx context.Context, in *PickUpRequest, opts ...grpc.CallOption) (*PickUpResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PickUpResponse)
+	err := c.cc.Invoke(ctx, FleetService_RequestPickup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fleetServiceClient) RequestDelivery(ctx context.Context, in *DeliverRequest, opts ...grpc.CallOption) (*DeliverResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeliverResponse)
+	err := c.cc.Invoke(ctx, FleetService_RequestDelivery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FleetServiceServer is the server API for FleetService service.
 // All implementations must embed UnimplementedFleetServiceServer
 // for forward compatibility.
 type FleetServiceServer interface {
 	RegisterTruck(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	SendTelemetry(context.Context, *Telemetry) (*Command, error)
+	RequestPickup(context.Context, *PickUpRequest) (*PickUpResponse, error)
+	RequestDelivery(context.Context, *DeliverRequest) (*DeliverResponse, error)
 	mustEmbedUnimplementedFleetServiceServer()
 }
 
@@ -80,6 +106,12 @@ func (UnimplementedFleetServiceServer) RegisterTruck(context.Context, *RegisterR
 }
 func (UnimplementedFleetServiceServer) SendTelemetry(context.Context, *Telemetry) (*Command, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendTelemetry not implemented")
+}
+func (UnimplementedFleetServiceServer) RequestPickup(context.Context, *PickUpRequest) (*PickUpResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RequestPickup not implemented")
+}
+func (UnimplementedFleetServiceServer) RequestDelivery(context.Context, *DeliverRequest) (*DeliverResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RequestDelivery not implemented")
 }
 func (UnimplementedFleetServiceServer) mustEmbedUnimplementedFleetServiceServer() {}
 func (UnimplementedFleetServiceServer) testEmbeddedByValue()                      {}
@@ -138,6 +170,42 @@ func _FleetService_SendTelemetry_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FleetService_RequestPickup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PickUpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FleetServiceServer).RequestPickup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FleetService_RequestPickup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FleetServiceServer).RequestPickup(ctx, req.(*PickUpRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FleetService_RequestDelivery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeliverRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FleetServiceServer).RequestDelivery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FleetService_RequestDelivery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FleetServiceServer).RequestDelivery(ctx, req.(*DeliverRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FleetService_ServiceDesc is the grpc.ServiceDesc for FleetService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -153,7 +221,15 @@ var FleetService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "SendTelemetry",
 			Handler:    _FleetService_SendTelemetry_Handler,
 		},
+		{
+			MethodName: "RequestPickup",
+			Handler:    _FleetService_RequestPickup_Handler,
+		},
+		{
+			MethodName: "RequestDelivery",
+			Handler:    _FleetService_RequestDelivery_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/fleet.proto",
+	Metadata: "fleet.proto",
 }

@@ -10,6 +10,13 @@ service FleetService {
 
     rpc SendTelemetry(Telemetry)
         returns (Command);
+
+    rpc RequestPickup(PickUpRequest)
+        returns (PickUpResponse);
+
+    rpc RequestDelivery(DeliverRequest)
+        returns (DeliverResponse);
+
 }
 
 message Point {
@@ -18,12 +25,43 @@ message Point {
 }
 
 message RegisterRequest {
-    int32 truck_id = 1;
+    int32 truckId = 1;
 }
 
 message RegisterResponse {
     bool accepted = 1;
     map<int32, Point> points = 2;
+}
+
+message PickUpResponse {
+    bool accepted = 1;
+}
+
+message PickUpRequest {
+    int32 truckId = 1;
+    int64 orderId = 2;
+    int32 nodeId = 3;
+}
+
+message DeliverResponse {
+    bool accepted = 1;
+}
+
+message DeliverRequest {
+    int32 truckId = 1;
+    int64 orderId = 2;
+    int32 nodeId = 3;
+}
+
+message Order {
+    int64 id = 1;
+    float weight = 2;
+    int32 size = 3;
+    int32 pickUp = 4;       // Node id
+    int32 dropOff = 5;      // Node id
+    bool pickedUp = 6;
+    bool delivered = 7;
+    int32 truckId = 8;    // Truck assigned to order
 }
 
 enum TruckState {
@@ -41,6 +79,9 @@ message Telemetry {
   double battery = 4;
   TruckState state = 5;
   int64 timestamp = 6;
+  int32 dest = 7;
+  Route route = 8;
+  int32 current = 9; 
 }
 
 enum CommandType {
@@ -50,7 +91,12 @@ enum CommandType {
     NEW_ROUTE = 3;
 }
 
+message Route {
+    repeated int32 nodes = 1;
+}
+
 message Command {
     CommandType type = 1;
-    repeated int32 route = 2;
+    Route route = 2;
+    repeated Order orders = 3;
 }
