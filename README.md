@@ -31,9 +31,9 @@ The goal of this project is to build a realistic logistics backend inspired by m
 
 * [x] Repository initialized
 * [x] gRPC interface defined (`fleet.proto`)
-* [ ] Go gRPC server
-* [ ] Truck registration
-* [ ] Telemetry system
+* [x] Go gRPC server
+* [x] Truck registration
+* [x] Telemetry system
 * [ ] World model
 * [ ] PostgreSQL integration
 * [ ] Python optimization service
@@ -107,7 +107,7 @@ The optimization service will combine:
 | Optimization     | OR-Tools                   |
 | Machine Learning | Python, XGBoost            |
 | Frontend         | HTML, JavaScript           |
-| Visualization    | Python (Matplotlib/Plotly) |
+| Visualization    | Python (Matplotlib)        |
 | Deployment       | Docker Compose (planned)   |
 
 ## Roadmap
