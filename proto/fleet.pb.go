@@ -29,6 +29,7 @@ const (
 	TruckState_CHARGING   TruckState = 2
 	TruckState_WAITING    TruckState = 3
 	TruckState_DELIVERING TruckState = 4
+	TruckState_OFFLINE    TruckState = 5
 )
 
 // Enum value maps for TruckState.
@@ -39,6 +40,7 @@ var (
 		2: "CHARGING",
 		3: "WAITING",
 		4: "DELIVERING",
+		5: "OFFLINE",
 	}
 	TruckState_value = map[string]int32{
 		"IDLE":       0,
@@ -46,6 +48,7 @@ var (
 		"CHARGING":   2,
 		"WAITING":    3,
 		"DELIVERING": 4,
+		"OFFLINE":    5,
 	}
 )
 
@@ -848,7 +851,7 @@ const file_fleet_proto_rawDesc = "" +
 	"\aCommand\x12&\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x12.fleet.CommandTypeR\x04type\x12\"\n" +
 	"\x05route\x18\x02 \x01(\v2\f.fleet.RouteR\x05route\x12$\n" +
-	"\x06orders\x18\x03 \x03(\v2\f.fleet.OrderR\x06orders*N\n" +
+	"\x06orders\x18\x03 \x03(\v2\f.fleet.OrderR\x06orders*[\n" +
 	"\n" +
 	"TruckState\x12\b\n" +
 	"\x04IDLE\x10\x00\x12\v\n" +
@@ -856,7 +859,8 @@ const file_fleet_proto_rawDesc = "" +
 	"\bCHARGING\x10\x02\x12\v\n" +
 	"\aWAITING\x10\x03\x12\x0e\n" +
 	"\n" +
-	"DELIVERING\x10\x04*>\n" +
+	"DELIVERING\x10\x04\x12\v\n" +
+	"\aOFFLINE\x10\x05*>\n" +
 	"\vCommandType\x12\b\n" +
 	"\x04NONE\x10\x00\x12\b\n" +
 	"\x04STOP\x10\x01\x12\f\n" +

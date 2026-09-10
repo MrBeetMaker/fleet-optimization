@@ -70,6 +70,7 @@ enum TruckState {
   CHARGING = 2;
   WAITING = 3;
   DELIVERING = 4;
+  OFFLINE = 5;
 }
 
 message Telemetry {
