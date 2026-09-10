@@ -31,7 +31,7 @@ type Truck struct {
 	route   fleetpb.Route
 	nodeMap map[int32]*fleetpb.Point
 
-	State  fleetpb.TruckState
+	state  fleetpb.TruckState
 	client fleetpb.FleetServiceClient
 	conn   *grpc.ClientConn
 }
@@ -45,7 +45,7 @@ func (t *Truck) SendTelemetry() {
 			X:         t.x,
 			Y:         t.y,
 			Battery:   t.battery,
-			State:     t.State,
+			State:     t.state,
 			Current:   t.current,
 			Timestamp: time.Now().Unix(),
 			Dest:      t.dest,
@@ -79,8 +79,9 @@ func NewTruck(id int32) *Truck {
 		y:       0,
 		destX:   0,
 		destY:   0,
-		dest:    0,
+		dest:    -1,
 		current: -1,
+		state:   fleetpb.TruckState_IDLE,
 		conn:    conn,
 		nodeMap: make(map[int32]*fleetpb.Point),
 		route:   fleetpb.Route{},
@@ -91,18 +92,32 @@ func NewTruck(id int32) *Truck {
 
 func (t *Truck) Register() {
 
-	resp, err := t.client.RegisterTruck(
-		context.Background(),
-		&fleetpb.RegisterRequest{
-			TruckId: t.id,
-		},
-	)
+	log.Printf("Registering truck %d: ", t.id)
+	maxRetries := 10
+	backoffDuration := time.Second * 5
+	var err error
+	var resp *fleetpb.RegisterResponse
+	for attempt := range maxRetries {
+		resp, err = t.client.RegisterTruck(context.Background(),
+			&fleetpb.RegisterRequest{
+				TruckId: t.id,
+			})
 
-	if err != nil {
-		log.Fatal(err)
+		if err == nil && resp.Accepted {
+			log.Printf("Success: %t", resp.Accepted)
+			break
+		}
+
+		if attempt < maxRetries {
+			log.Printf("Retrying in %d seconds (%d/%d). Error: %v. ", int(backoffDuration.Seconds()), attempt, maxRetries, err)
+			time.Sleep(backoffDuration)
+		}
 	}
 
-	log.Printf("Truck %d registered: %t", t.id, resp.Accepted)
+	if err != nil || !resp.Accepted {
+		log.Print("Failed to register truck! ")
+		log.Fatal(err)
+	}
 
 	for id, point := range resp.Points {
 		log.Printf("Point %d: x=%f y=%f", id, point.X, point.Y)
@@ -115,15 +130,15 @@ func (t *Truck) HandleCommand(cmd *fleetpb.Command) {
 	switch cmd.Type {
 
 	case fleetpb.CommandType_STOP:
-		t.State = fleetpb.TruckState_WAITING
+		t.state = fleetpb.TruckState_WAITING
 
 	case fleetpb.CommandType_CONTINUE:
-		if t.State == fleetpb.TruckState_WAITING {
-			t.State = fleetpb.TruckState_DRIVING
+		if t.state == fleetpb.TruckState_WAITING {
+			t.state = fleetpb.TruckState_DRIVING
 		}
 	case fleetpb.CommandType_NEW_ROUTE:
 		log.Printf("Truck %d received new route: %v", t.id, cmd.Route.Nodes)
-		t.State = fleetpb.TruckState_DRIVING
+		t.state = fleetpb.TruckState_DRIVING
 
 		// Append new route
 		if cmd.Route != nil {
@@ -230,7 +245,7 @@ func (t *Truck) nextDestination() {
 
 	if len(t.route.Nodes) <= 1 {
 		log.Printf("Truck %d has no route (IDLE).", t.id)
-		t.State = fleetpb.TruckState_IDLE
+		t.state = fleetpb.TruckState_IDLE
 		t.dest = -1
 		t.route = fleetpb.Route{} // Remove current destination to avoid duplicate visits
 		return
@@ -240,7 +255,7 @@ func (t *Truck) nextDestination() {
 
 	if t.setDestination(t.route.Nodes[0]) {
 		log.Printf("Truck %d is driving to node %d at (%f, %f)", t.id, t.route.Nodes[0], t.destX, t.destY)
-		t.State = fleetpb.TruckState_DRIVING
+		t.state = fleetpb.TruckState_DRIVING
 	}
 }
 
@@ -296,7 +311,7 @@ func (t *Truck) drive() {
 		return
 	}
 
-	speed := 0.1
+	speed := 0.5
 	if norm < speed { // Avoid overshooting destination
 		speed = norm
 	}
@@ -314,8 +329,9 @@ func (t *Truck) Run() {
 	defer t.conn.Close()
 
 	t.Register()
+	t.state = fleetpb.TruckState_IDLE
 
-	ticker := time.NewTicker(time.Second / 10)
+	ticker := time.NewTicker(time.Second)
 
 	defer ticker.Stop()
 
