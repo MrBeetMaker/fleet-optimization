@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"math"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -46,8 +46,31 @@ type FleetServer struct {
 	// Schedules and optimizes routes
 	optimizer fleetpb.OptimizerServiceClient
 
+	// postgreSQL Database connection
+	db *Database
+
 	// Maps truck id's to a list of commands
 	commands map[int32][]*fleetpb.Command
+}
+
+// Help function for converting database records of trucks to proto structs
+func toProtoTruckState(state TruckState) fleetpb.TruckState {
+	switch state {
+	case TruckIdle:
+		return fleetpb.TruckState_IDLE
+	case TruckDriving:
+		return fleetpb.TruckState_DRIVING
+	case TruckCharging:
+		return fleetpb.TruckState_CHARGING
+	case TruckWaiting:
+		return fleetpb.TruckState_WAITING
+	case TruckOffline:
+		return fleetpb.TruckState_OFFLINE
+	case TruckDelivering:
+		return fleetpb.TruckState_DELIVERING
+	default:
+		return fleetpb.TruckState_IDLE
+	}
 }
 
 type TruckInfo struct {
@@ -60,27 +83,87 @@ type TruckInfo struct {
 	Route   fleetpb.Route
 }
 
-func NewFleetServer(optimizer fleetpb.OptimizerServiceClient) *FleetServer {
+func NewFleetServer(db *Database, optimizer fleetpb.OptimizerServiceClient) (*FleetServer, error) {
+
+	ctx := context.Background()
 
 	// Retrieve world map
-	nodeMap := retrieveNodeMap()
+	dbWorld, err := db.GetPoints(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Load points: %w", err)
+	}
 
 	// Initiate truck registry
-	trucks := retrieveTrucks()
+	dbTrucks, err := db.GetTrucks(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Load trucks: %w", err)
+	}
 
 	// Retrieve orders
-	orders := retrieveOrders()
+	dbOrders, err := db.GetActiveOrders(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Load orders: %w", err)
+	}
 
 	// Init commands
 	commands := make(map[int32][]*fleetpb.Command)
 
+	// Convert database records to protobuf/domain representations.
+
+	nodeMap := make(map[int32]*fleetpb.Point, len(dbWorld))
+	for _, p := range dbWorld {
+		nodeMap[p.ID] = &fleetpb.Point{
+			X: float32(p.X),
+			Y: float32(p.Y),
+		}
+	}
+
+	trucks := make(map[int32]*TruckInfo, len(dbTrucks))
+	for _, t := range dbTrucks {
+		trucks[t.ID] = &TruckInfo{
+			Battery: 0,
+			State:   toProtoTruckState(t.State),
+			X:       t.X,
+			Y:       t.Y,
+			Dest:    -1,
+			Current: -1,
+			Route:   fleetpb.Route{},
+		}
+	}
+
+	orders := make(map[int64]*fleetpb.Order, len(dbOrders))
+	for _, o := range dbOrders {
+		order := &fleetpb.Order{
+			Id:        o.ID,
+			Weight:    float32(o.Weight),
+			Size:      o.Size,
+			PickUp:    o.PickupID,
+			DropOff:   o.DropoffID,
+			PickedUp:  o.State == OrderPickedUp || o.State == OrderDelivered,
+			Delivered: o.State == OrderDelivered,
+		}
+
+		// proto3 has no nullable scalar, so use 0 when TruckID is nil.
+		order.TruckId = -1
+		if o.TruckID != nil {
+			order.TruckId = *o.TruckID
+		}
+
+		orders[o.ID] = order
+	}
+
+	log.Printf("Retrieved %d nodes.", len(nodeMap))
+	log.Printf("Retrieved %d trucks", len(trucks))
+	log.Printf("Retrieved %d orders", len(orders))
+
 	return &FleetServer{
+		db:        db,
 		optimizer: optimizer,
+		world:     nodeMap,
 		trucks:    trucks,
 		orders:    orders,
-		world:     nodeMap,
 		commands:  commands,
-	}
+	}, nil
 }
 
 func (s *FleetServer) RunPeriodicRoutePlanning() {
@@ -96,25 +179,45 @@ func (s *FleetServer) RunPeriodicRoutePlanning() {
 }
 
 // Send a request for route creation to the optimizer service.
+// Aborts if no trucks are available
 func (s *FleetServer) createRoutes() {
 
 	s.ordersMutex.RLock()
-	orders := make([]*fleetpb.Order, 0, len(s.orders))
+	total := len(s.orders)
+	orders := make([]*fleetpb.Order, 0, total)
 	for _, order := range s.orders {
+		// Skip orders that are already been assigned
+		if order.TruckId >= 0 {
+			continue
+		}
+
 		// Deep copy to avoid data race
 		orders = append(orders, proto.Clone(order).(*fleetpb.Order))
 	}
+
 	s.ordersMutex.RUnlock()
 
 	if len(orders) == 0 {
+		log.Printf("Found %d pending orders.", len(orders))
 		return
 	}
 
+	found := 0
+	nrOfTrucks := int32(0)
 	s.truckMutex.RLock()
-	nrOfTrucks := int32(len(s.trucks))
+	for truckId := range s.trucks {
+		truck, exists := s.trucks[truckId]
+		if exists {
+			found += 1
+		}
+		if truck.State != fleetpb.TruckState_OFFLINE {
+			nrOfTrucks += 1
+		}
+	}
 	s.truckMutex.RUnlock()
 
 	if nrOfTrucks == 0 {
+		log.Printf("Can't create routes: found %d trucks, but %d are online.", found, nrOfTrucks)
 		return
 	}
 
@@ -140,12 +243,16 @@ func (s *FleetServer) createRoutes() {
 		return
 	}
 
-	log.Printf("Optimizer returned routes: %v", resp.Routes)
+	log.Printf("Optimizer returned routes:")
+	for i, route := range resp.Routes {
+		log.Printf("\tRoute %d: %v", i, route.Nodes)
+	}
 
 	s.assignRoutes(resp.Routes, resp.OrderIds)
 }
 
 // Assigns routes to trucks
+// Currently excludes trucks that are offline
 func (s *FleetServer) assignRoutes(routes map[int32]*fleetpb.Route, orderIds map[int32]*fleetpb.OrderIds) {
 	s.truckMutex.Lock()
 
@@ -163,6 +270,13 @@ func (s *FleetServer) assignRoutes(routes map[int32]*fleetpb.Route, orderIds map
 		if _, nodeExists := s.world[route.Nodes[0]]; !nodeExists {
 			routeDone[routeId] = true
 			log.Printf("WARNING: Route %d contains node %d: Node does not exist in node map!", routeId, route.Nodes[0])
+		}
+	}
+
+	// Also exclude trucks that are offline
+	for truckId, truck := range s.trucks {
+		if truck.State == fleetpb.TruckState_OFFLINE {
+			truckDone[truckId] = true
 		}
 	}
 
@@ -387,8 +501,8 @@ func (s *FleetServer) RegisterTruck(ctx context.Context, req *fleetpb.RegisterRe
 	s.truckMutex.Lock()
 	defer s.truckMutex.Unlock()
 
-	if _, exists := s.trucks[req.TruckId]; exists {
-		log.Printf("Declined registration request for Truck %d: Truck %d is already registered.", req.TruckId, req.TruckId)
+	if truck, exists := s.trucks[req.TruckId]; exists && truck.State != fleetpb.TruckState_OFFLINE {
+		log.Printf("Declined registration request for Truck %d: Truck %d is already registered and %s.", req.TruckId, req.TruckId, truck.State)
 
 		return &fleetpb.RegisterResponse{
 			Accepted: false,
@@ -435,79 +549,4 @@ func (s *FleetServer) SendTelemetry(ctx context.Context, t *fleetpb.Telemetry) (
 	return &fleetpb.Command{
 		Type: fleetpb.CommandType_CONTINUE,
 	}, nil
-}
-
-// ToDo: implement SQL database and retrieve nodes from there.
-func retrieveNodeMap() map[int32]*fleetpb.Point {
-	return map[int32]*fleetpb.Point{
-		0:  {X: float32(0.0), Y: float32(0.0)},
-		1:  {X: float32(1.0), Y: float32(1.0)},
-		2:  {X: float32(1.8), Y: float32(1.4)},
-		3:  {X: float32(2.5), Y: float32(2.1)},
-		4:  {X: float32(1.6), Y: float32(2.6)},
-		5:  {X: float32(0.8), Y: float32(2.0)},
-		6:  {X: float32(2.1), Y: float32(0.7)},
-		7:  {X: float32(3.0), Y: float32(1.2)},
-		8:  {X: float32(3.4), Y: float32(2.3)},
-		9:  {X: float32(7.0), Y: float32(1.0)},
-		10: {X: float32(8.2), Y: float32(1.3)},
-		11: {X: float32(8.8), Y: float32(2.2)},
-		12: {X: float32(8.1), Y: float32(3.0)},
-		13: {X: float32(6.9), Y: float32(3.2)},
-		14: {X: float32(6.1), Y: float32(2.3)},
-		15: {X: float32(6.2), Y: float32(1.4)},
-		16: {X: float32(7.5), Y: float32(2.0)},
-		17: {X: float32(13.0), Y: float32(7.0)},
-		18: {X: float32(14.2), Y: float32(7.4)},
-		19: {X: float32(15.0), Y: float32(8.3)},
-		20: {X: float32(14.6), Y: float32(9.4)},
-		21: {X: float32(13.3), Y: float32(9.8)},
-		22: {X: float32(12.2), Y: float32(9.1)},
-		23: {X: float32(11.8), Y: float32(8.0)},
-		24: {X: float32(12.5), Y: float32(7.2)},
-		25: {X: float32(4.0), Y: float32(3.5)},
-		26: {X: float32(5.0), Y: float32(4.0)},
-		27: {X: float32(6.0), Y: float32(4.8)},
-		28: {X: float32(7.2), Y: float32(5.1)},
-		29: {X: float32(8.5), Y: float32(5.8)},
-		30: {X: float32(9.7), Y: float32(6.2)},
-		31: {X: float32(10.8), Y: float32(6.8)},
-		32: {X: float32(11.5), Y: float32(7.4)},
-	}
-}
-
-// ToDo: implement SQL database and retrieve trucks from there.
-func retrieveTrucks() map[int32]*TruckInfo {
-	return map[int32]*TruckInfo{}
-}
-
-// ToDo: implement SQL database and retrieve orders from there.
-func retrieveOrders() map[int64]*fleetpb.Order {
-
-	nrOfOrders := 10
-
-	orders := make(map[int64]*fleetpb.Order)
-
-	for range nrOfOrders {
-
-		orderId := rand.Int63n(999999)
-		pickUp := rand.Int31n(17)
-		dropOff := rand.Int31n(16) + 17
-		size := 1 + rand.Int31n(9)
-		weight := float32(size * int32(1+10*rand.Float32()))
-		truckId := int32(-1) // No truck assigned
-
-		orders[orderId] = &fleetpb.Order{
-			Id:        orderId,
-			PickUp:    pickUp,
-			DropOff:   dropOff,
-			Size:      size,
-			Weight:    weight,
-			PickedUp:  false,
-			Delivered: false,
-			TruckId:   truckId,
-		}
-	}
-
-	return orders
 }
