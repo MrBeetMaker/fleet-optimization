@@ -21,6 +21,94 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type InitRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Points        map[int32]*Point       `protobuf:"bytes,1,rep,name=points,proto3" json:"points,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InitRequest) Reset() {
+	*x = InitRequest{}
+	mi := &file_optim_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InitRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitRequest) ProtoMessage() {}
+
+func (x *InitRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_optim_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitRequest.ProtoReflect.Descriptor instead.
+func (*InitRequest) Descriptor() ([]byte, []int) {
+	return file_optim_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *InitRequest) GetPoints() map[int32]*Point {
+	if x != nil {
+		return x.Points
+	}
+	return nil
+}
+
+type InitResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InitResponse) Reset() {
+	*x = InitResponse{}
+	mi := &file_optim_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InitResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitResponse) ProtoMessage() {}
+
+func (x *InitResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_optim_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitResponse.ProtoReflect.Descriptor instead.
+func (*InitResponse) Descriptor() ([]byte, []int) {
+	return file_optim_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *InitResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 type CreateRouteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Orders        []*Order               `protobuf:"bytes,1,rep,name=orders,proto3" json:"orders,omitempty"`
@@ -32,7 +120,7 @@ type CreateRouteRequest struct {
 
 func (x *CreateRouteRequest) Reset() {
 	*x = CreateRouteRequest{}
-	mi := &file_optim_proto_msgTypes[0]
+	mi := &file_optim_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +132,7 @@ func (x *CreateRouteRequest) String() string {
 func (*CreateRouteRequest) ProtoMessage() {}
 
 func (x *CreateRouteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_optim_proto_msgTypes[0]
+	mi := &file_optim_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +145,7 @@ func (x *CreateRouteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRouteRequest.ProtoReflect.Descriptor instead.
 func (*CreateRouteRequest) Descriptor() ([]byte, []int) {
-	return file_optim_proto_rawDescGZIP(), []int{0}
+	return file_optim_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CreateRouteRequest) GetOrders() []*Order {
@@ -90,7 +178,7 @@ type OrderIds struct {
 
 func (x *OrderIds) Reset() {
 	*x = OrderIds{}
-	mi := &file_optim_proto_msgTypes[1]
+	mi := &file_optim_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -102,7 +190,7 @@ func (x *OrderIds) String() string {
 func (*OrderIds) ProtoMessage() {}
 
 func (x *OrderIds) ProtoReflect() protoreflect.Message {
-	mi := &file_optim_proto_msgTypes[1]
+	mi := &file_optim_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -115,7 +203,7 @@ func (x *OrderIds) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrderIds.ProtoReflect.Descriptor instead.
 func (*OrderIds) Descriptor() ([]byte, []int) {
-	return file_optim_proto_rawDescGZIP(), []int{1}
+	return file_optim_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *OrderIds) GetIds() []int64 {
@@ -135,7 +223,7 @@ type CreateRouteResponse struct {
 
 func (x *CreateRouteResponse) Reset() {
 	*x = CreateRouteResponse{}
-	mi := &file_optim_proto_msgTypes[2]
+	mi := &file_optim_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -147,7 +235,7 @@ func (x *CreateRouteResponse) String() string {
 func (*CreateRouteResponse) ProtoMessage() {}
 
 func (x *CreateRouteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_optim_proto_msgTypes[2]
+	mi := &file_optim_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -160,7 +248,7 @@ func (x *CreateRouteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRouteResponse.ProtoReflect.Descriptor instead.
 func (*CreateRouteResponse) Descriptor() ([]byte, []int) {
-	return file_optim_proto_rawDescGZIP(), []int{2}
+	return file_optim_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CreateRouteResponse) GetRoutes() map[int32]*Route {
@@ -181,7 +269,14 @@ var File_optim_proto protoreflect.FileDescriptor
 
 const file_optim_proto_rawDesc = "" +
 	"\n" +
-	"\voptim.proto\x12\x05fleet\x1a\vfleet.proto\"\xe2\x01\n" +
+	"\voptim.proto\x12\x05fleet\x1a\vfleet.proto\"\x8e\x01\n" +
+	"\vInitRequest\x126\n" +
+	"\x06points\x18\x01 \x03(\v2\x1e.fleet.InitRequest.PointsEntryR\x06points\x1aG\n" +
+	"\vPointsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\"\n" +
+	"\x05value\x18\x02 \x01(\v2\f.fleet.PointR\x05value:\x028\x01\"(\n" +
+	"\fInitResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xe2\x01\n" +
 	"\x12CreateRouteRequest\x12$\n" +
 	"\x06orders\x18\x01 \x03(\v2\f.fleet.OrderR\x06orders\x12=\n" +
 	"\x06points\x18\x02 \x03(\v2%.fleet.CreateRouteRequest.PointsEntryR\x06points\x12\x1e\n" +
@@ -201,8 +296,9 @@ const file_optim_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2\f.fleet.RouteR\x05value:\x028\x01\x1aL\n" +
 	"\rOrderIdsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12%\n" +
-	"\x05value\x18\x02 \x01(\v2\x0f.fleet.OrderIdsR\x05value:\x028\x012X\n" +
-	"\x10OptimizerService\x12D\n" +
+	"\x05value\x18\x02 \x01(\v2\x0f.fleet.OrderIdsR\x05value:\x028\x012\x98\x01\n" +
+	"\x10OptimizerService\x12>\n" +
+	"\x13InitializeOptimizer\x12\x12.fleet.InitRequest\x1a\x13.fleet.InitResponse\x12D\n" +
 	"\vCreateRoute\x12\x19.fleet.CreateRouteRequest\x1a\x1a.fleet.CreateRouteResponseB9Z7github.com/MrBeetMaker/fleet-optimization/proto;fleetpbb\x06proto3"
 
 var (
@@ -217,33 +313,40 @@ func file_optim_proto_rawDescGZIP() []byte {
 	return file_optim_proto_rawDescData
 }
 
-var file_optim_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_optim_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_optim_proto_goTypes = []any{
-	(*CreateRouteRequest)(nil),  // 0: fleet.CreateRouteRequest
-	(*OrderIds)(nil),            // 1: fleet.OrderIds
-	(*CreateRouteResponse)(nil), // 2: fleet.CreateRouteResponse
-	nil,                         // 3: fleet.CreateRouteRequest.PointsEntry
-	nil,                         // 4: fleet.CreateRouteResponse.RoutesEntry
-	nil,                         // 5: fleet.CreateRouteResponse.OrderIdsEntry
-	(*Order)(nil),               // 6: fleet.Order
-	(*Point)(nil),               // 7: fleet.Point
-	(*Route)(nil),               // 8: fleet.Route
+	(*InitRequest)(nil),         // 0: fleet.InitRequest
+	(*InitResponse)(nil),        // 1: fleet.InitResponse
+	(*CreateRouteRequest)(nil),  // 2: fleet.CreateRouteRequest
+	(*OrderIds)(nil),            // 3: fleet.OrderIds
+	(*CreateRouteResponse)(nil), // 4: fleet.CreateRouteResponse
+	nil,                         // 5: fleet.InitRequest.PointsEntry
+	nil,                         // 6: fleet.CreateRouteRequest.PointsEntry
+	nil,                         // 7: fleet.CreateRouteResponse.RoutesEntry
+	nil,                         // 8: fleet.CreateRouteResponse.OrderIdsEntry
+	(*Order)(nil),               // 9: fleet.Order
+	(*Point)(nil),               // 10: fleet.Point
+	(*Route)(nil),               // 11: fleet.Route
 }
 var file_optim_proto_depIdxs = []int32{
-	6, // 0: fleet.CreateRouteRequest.orders:type_name -> fleet.Order
-	3, // 1: fleet.CreateRouteRequest.points:type_name -> fleet.CreateRouteRequest.PointsEntry
-	4, // 2: fleet.CreateRouteResponse.routes:type_name -> fleet.CreateRouteResponse.RoutesEntry
-	5, // 3: fleet.CreateRouteResponse.order_ids:type_name -> fleet.CreateRouteResponse.OrderIdsEntry
-	7, // 4: fleet.CreateRouteRequest.PointsEntry.value:type_name -> fleet.Point
-	8, // 5: fleet.CreateRouteResponse.RoutesEntry.value:type_name -> fleet.Route
-	1, // 6: fleet.CreateRouteResponse.OrderIdsEntry.value:type_name -> fleet.OrderIds
-	0, // 7: fleet.OptimizerService.CreateRoute:input_type -> fleet.CreateRouteRequest
-	2, // 8: fleet.OptimizerService.CreateRoute:output_type -> fleet.CreateRouteResponse
-	8, // [8:9] is the sub-list for method output_type
-	7, // [7:8] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	5,  // 0: fleet.InitRequest.points:type_name -> fleet.InitRequest.PointsEntry
+	9,  // 1: fleet.CreateRouteRequest.orders:type_name -> fleet.Order
+	6,  // 2: fleet.CreateRouteRequest.points:type_name -> fleet.CreateRouteRequest.PointsEntry
+	7,  // 3: fleet.CreateRouteResponse.routes:type_name -> fleet.CreateRouteResponse.RoutesEntry
+	8,  // 4: fleet.CreateRouteResponse.order_ids:type_name -> fleet.CreateRouteResponse.OrderIdsEntry
+	10, // 5: fleet.InitRequest.PointsEntry.value:type_name -> fleet.Point
+	10, // 6: fleet.CreateRouteRequest.PointsEntry.value:type_name -> fleet.Point
+	11, // 7: fleet.CreateRouteResponse.RoutesEntry.value:type_name -> fleet.Route
+	3,  // 8: fleet.CreateRouteResponse.OrderIdsEntry.value:type_name -> fleet.OrderIds
+	0,  // 9: fleet.OptimizerService.InitializeOptimizer:input_type -> fleet.InitRequest
+	2,  // 10: fleet.OptimizerService.CreateRoute:input_type -> fleet.CreateRouteRequest
+	1,  // 11: fleet.OptimizerService.InitializeOptimizer:output_type -> fleet.InitResponse
+	4,  // 12: fleet.OptimizerService.CreateRoute:output_type -> fleet.CreateRouteResponse
+	11, // [11:13] is the sub-list for method output_type
+	9,  // [9:11] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_optim_proto_init() }
@@ -258,7 +361,7 @@ func file_optim_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_optim_proto_rawDesc), len(file_optim_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

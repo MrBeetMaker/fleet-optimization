@@ -19,13 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OptimizerService_CreateRoute_FullMethodName = "/fleet.OptimizerService/CreateRoute"
+	OptimizerService_InitializeOptimizer_FullMethodName = "/fleet.OptimizerService/InitializeOptimizer"
+	OptimizerService_CreateRoute_FullMethodName         = "/fleet.OptimizerService/CreateRoute"
 )
 
 // OptimizerServiceClient is the client API for OptimizerService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OptimizerServiceClient interface {
+	InitializeOptimizer(ctx context.Context, in *InitRequest, opts ...grpc.CallOption) (*InitResponse, error)
 	CreateRoute(ctx context.Context, in *CreateRouteRequest, opts ...grpc.CallOption) (*CreateRouteResponse, error)
 }
 
@@ -35,6 +37,16 @@ type optimizerServiceClient struct {
 
 func NewOptimizerServiceClient(cc grpc.ClientConnInterface) OptimizerServiceClient {
 	return &optimizerServiceClient{cc}
+}
+
+func (c *optimizerServiceClient) InitializeOptimizer(ctx context.Context, in *InitRequest, opts ...grpc.CallOption) (*InitResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InitResponse)
+	err := c.cc.Invoke(ctx, OptimizerService_InitializeOptimizer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *optimizerServiceClient) CreateRoute(ctx context.Context, in *CreateRouteRequest, opts ...grpc.CallOption) (*CreateRouteResponse, error) {
@@ -51,6 +63,7 @@ func (c *optimizerServiceClient) CreateRoute(ctx context.Context, in *CreateRout
 // All implementations must embed UnimplementedOptimizerServiceServer
 // for forward compatibility.
 type OptimizerServiceServer interface {
+	InitializeOptimizer(context.Context, *InitRequest) (*InitResponse, error)
 	CreateRoute(context.Context, *CreateRouteRequest) (*CreateRouteResponse, error)
 	mustEmbedUnimplementedOptimizerServiceServer()
 }
@@ -62,6 +75,9 @@ type OptimizerServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedOptimizerServiceServer struct{}
 
+func (UnimplementedOptimizerServiceServer) InitializeOptimizer(context.Context, *InitRequest) (*InitResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method InitializeOptimizer not implemented")
+}
 func (UnimplementedOptimizerServiceServer) CreateRoute(context.Context, *CreateRouteRequest) (*CreateRouteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateRoute not implemented")
 }
@@ -84,6 +100,24 @@ func RegisterOptimizerServiceServer(s grpc.ServiceRegistrar, srv OptimizerServic
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&OptimizerService_ServiceDesc, srv)
+}
+
+func _OptimizerService_InitializeOptimizer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OptimizerServiceServer).InitializeOptimizer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OptimizerService_InitializeOptimizer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OptimizerServiceServer).InitializeOptimizer(ctx, req.(*InitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _OptimizerService_CreateRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -111,6 +145,10 @@ var OptimizerService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "fleet.OptimizerService",
 	HandlerType: (*OptimizerServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "InitializeOptimizer",
+			Handler:    _OptimizerService_InitializeOptimizer_Handler,
+		},
 		{
 			MethodName: "CreateRoute",
 			Handler:    _OptimizerService_CreateRoute_Handler,

@@ -8,8 +8,19 @@ option go_package = "github.com/MrBeetMaker/fleet-optimization/proto;fleetpb";
 
 service OptimizerService {
 
+    rpc InitializeOptimizer(InitRequest)
+        returns (InitResponse);
+
     rpc CreateRoute(CreateRouteRequest)
         returns (CreateRouteResponse);
+}
+
+message InitRequest {
+    map<int32, fleet.Point> points = 1;
+}
+
+message InitResponse {
+    bool success = 1;
 }
 
 message CreateRouteRequest {

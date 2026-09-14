@@ -166,11 +166,46 @@ func NewFleetServer(db *Database, optimizer fleetpb.OptimizerServiceClient) (*Fl
 	}, nil
 }
 
+// Sends the nodeMap to the Optimizer
+func (s *FleetServer) InitOptimizer() (bool, error) {
+	maxRetries := 5
+	backoffDuration := time.Second * 2
+
+	resp, err := retry(func() (*fleetpb.InitResponse, error) {
+
+		resp, err := s.optimizer.InitializeOptimizer(
+			context.Background(),
+			&fleetpb.InitRequest{
+				Points: s.world,
+			},
+		)
+
+		if err != nil {
+			return &fleetpb.InitResponse{
+				Success: false}, err
+		} else {
+			return resp, err
+		}
+
+	}, maxRetries, backoffDuration)
+
+	return resp.Success, err
+}
+
 func (s *FleetServer) RunPeriodicRoutePlanning() {
+
+	success, err := s.InitOptimizer()
+
+	if err != nil || !success {
+		log.Panic("Optimizer could not recieve node map!")
+	}
 
 	s.createRoutes()
 
-	ticker := time.NewTicker(10 * time.Second)
+	interval := 20 * time.Second
+
+	ticker := time.NewTicker(interval)
+
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -181,6 +216,7 @@ func (s *FleetServer) RunPeriodicRoutePlanning() {
 // Send a request for route creation to the optimizer service.
 // Aborts if no trucks are available
 func (s *FleetServer) createRoutes() {
+	maxWaitDuration := 18 * time.Second
 
 	s.ordersMutex.RLock()
 	total := len(s.orders)
@@ -221,7 +257,6 @@ func (s *FleetServer) createRoutes() {
 		return
 	}
 
-	maxWaitDuration := 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), maxWaitDuration)
 	defer cancel()
 
@@ -273,7 +308,7 @@ func (s *FleetServer) assignRoutes(routes map[int32]*fleetpb.Route, orderIds map
 		}
 	}
 
-	// Also exclude trucks that are offline
+	// Make sure to exclude trucks that are offline
 	for truckId, truck := range s.trucks {
 		if truck.State == fleetpb.TruckState_OFFLINE {
 			truckDone[truckId] = true
@@ -377,9 +412,8 @@ func (s *FleetServer) assignRoutes(routes map[int32]*fleetpb.Route, orderIds map
 
 		assignments = append(assignments, routeAssignment{truckId: bestTruckId, route: route, routeId: routeId})
 
-		log.Printf("Assigned route %d to Truck %d: distance %.2f", routeId, bestTruckId, bestDistance)
+		log.Printf("Assigned route %d to Truck %d: lowest distance to first node %.2f", routeId, bestTruckId, bestDistance)
 	}
-
 	s.truckMutex.Unlock()
 
 	for routeId := range routes {

@@ -5,7 +5,7 @@ import warnings
 
 import optim_pb2 as optim__pb2
 
-GRPC_GENERATED_VERSION = '1.83.1'
+GRPC_GENERATED_VERSION = '1.76.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -25,7 +25,7 @@ if _version_not_supported:
     )
 
 
-class OptimizerServiceStub:
+class OptimizerServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -34,6 +34,11 @@ class OptimizerServiceStub:
         Args:
             channel: A grpc.Channel.
         """
+        self.InitializeOptimizer = channel.unary_unary(
+                '/fleet.OptimizerService/InitializeOptimizer',
+                request_serializer=optim__pb2.InitRequest.SerializeToString,
+                response_deserializer=optim__pb2.InitResponse.FromString,
+                _registered_method=True)
         self.CreateRoute = channel.unary_unary(
                 '/fleet.OptimizerService/CreateRoute',
                 request_serializer=optim__pb2.CreateRouteRequest.SerializeToString,
@@ -41,8 +46,14 @@ class OptimizerServiceStub:
                 _registered_method=True)
 
 
-class OptimizerServiceServicer:
+class OptimizerServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
+
+    def InitializeOptimizer(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def CreateRoute(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -53,6 +64,11 @@ class OptimizerServiceServicer:
 
 def add_OptimizerServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'InitializeOptimizer': grpc.unary_unary_rpc_method_handler(
+                    servicer.InitializeOptimizer,
+                    request_deserializer=optim__pb2.InitRequest.FromString,
+                    response_serializer=optim__pb2.InitResponse.SerializeToString,
+            ),
             'CreateRoute': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateRoute,
                     request_deserializer=optim__pb2.CreateRouteRequest.FromString,
@@ -66,8 +82,35 @@ def add_OptimizerServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class OptimizerService:
+class OptimizerService(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def InitializeOptimizer(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/fleet.OptimizerService/InitializeOptimizer',
+            optim__pb2.InitRequest.SerializeToString,
+            optim__pb2.InitResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def CreateRoute(request,
