@@ -216,6 +216,7 @@ func (s *FleetServer) InitOptimizer() (bool, error) {
 func (s *FleetServer) GetPendingOrders() error {
 
 	s.ordersMutex.Lock()
+	defer s.ordersMutex.Unlock()
 
 	// Retrieve orders
 	dbOrders, err := s.db.GetPendingOrders(context.Background())
@@ -265,8 +266,6 @@ func (s *FleetServer) GetPendingOrders() error {
 			log.Printf("Order %d already exists in orders.", o.ID)
 		}
 	}
-
-	s.ordersMutex.Unlock()
 
 	return nil
 
@@ -518,7 +517,8 @@ func (s *FleetServer) assignRoutes(routes map[int32]*fleetpb.Route, orderIds map
 				order.TruckId = assignment.truckId
 				orders = append(orders, order)
 
-				err := s.db.AssignOrder(context.Background(), orderId, order.TruckId)
+				eventAt := time.Now().UTC()
+				err := s.db.AssignOrder(context.Background(), orderId, order.TruckId, eventAt)
 				if err != nil {
 					log.Printf("ERROR: Could not update database with order %d assigned to truck %d: %v", orderId, order.TruckId, err)
 				}
@@ -585,7 +585,7 @@ func (s *FleetServer) RequestPickup(ctx context.Context, req *fleetpb.PickUpRequ
 	s.ordersMutex.RUnlock()
 
 	s.truckMutex.RLock()
-	_, truckExists := s.trucks[req.TruckId] // ToDo: assign orders to specific truck, and decline pickup by other trucks
+	_, truckExists := s.trucks[req.TruckId]
 	s.truckMutex.RUnlock()
 
 	accepted := nodeExists && orderExists && truckExists && orderExistsAtNode
@@ -593,7 +593,8 @@ func (s *FleetServer) RequestPickup(ctx context.Context, req *fleetpb.PickUpRequ
 	log.Printf("Truck %d requested pick-up of order %d at node %d: %t", req.TruckId, req.OrderId, req.NodeId, accepted)
 
 	if accepted {
-		err := s.db.MarkOrderPickedUp(ctx, req.OrderId, order.TruckId)
+		timeStamp := time.Now().UTC()
+		err := s.db.MarkOrderPickedUp(ctx, req.OrderId, req.TruckId, timeStamp)
 		if err != nil {
 			log.Printf("ERROR: Could not mark order %d as picked up by truck %d on the database: %v", req.OrderId, req.TruckId, err)
 		}
@@ -622,9 +623,10 @@ func (s *FleetServer) RequestDelivery(ctx context.Context, req *fleetpb.DeliverR
 	log.Printf("Truck %d requested delivery of order %d at node %d: %t", req.TruckId, req.OrderId, req.NodeId, accepted)
 
 	if accepted {
-		err := s.db.MarkOrderDelivered(ctx, req.OrderId, order.TruckId)
+		timeStamp := time.Now().UTC()
+		err := s.db.MarkOrderDelivered(ctx, req.OrderId, req.TruckId, timeStamp)
 		if err != nil {
-			log.Printf("ERROR: Could not mark order %d as picked up by truck %d on the database: %v", req.OrderId, req.TruckId, err)
+			log.Printf("ERROR: Could not mark order %d as delivered by truck %d on the database: %v", req.OrderId, req.TruckId, err)
 		}
 	}
 
@@ -681,10 +683,18 @@ func (s *FleetServer) SendTelemetry(ctx context.Context, t *fleetpb.Telemetry) (
 
 	// Update database. In the future, this may be moved to a que and handled separately
 	if truckExists {
-		err := s.db.UpdateTruck(ctx, t.TruckId, toDatabaseTruckState(t.State), t.X, t.Y)
+		timeStamp := time.Now().UTC()
+		err := s.db.InsertTruckTelemetry(
+			ctx,
+			t.TruckId,
+			toDatabaseTruckState(t.State),
+			t.X,
+			t.Y,
+			timeStamp,
+		)
 
 		if err != nil {
-			log.Printf("ERROR: Could not update Truck %d in database: %v", t.TruckId, err)
+			log.Printf("ERROR: Could not record telemetry for Truck %d in database: %v", t.TruckId, err)
 		}
 	}
 
