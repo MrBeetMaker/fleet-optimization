@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -43,7 +44,7 @@ type PointRecord struct {
 	Y  float64
 }
 
-// TruckRecord is the database representation of a truck.
+// TruckRecord is a representation of a truck.
 type TruckRecord struct {
 	ID    int32
 	State TruckState
@@ -70,17 +71,17 @@ type OrderRecord struct {
 func OpenDatabase(ctx context.Context) (*Database, error) {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		return nil, fmt.Errorf("DATABASE_URL is not set")
+		return nil, fmt.Errorf("DATABASE: DATABASE_URL is not set")
 	}
 
 	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("parse database URL: %w", err)
+		return nil, fmt.Errorf("DATABASE: Could not parse database URL: %w", err)
 	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
-		return nil, fmt.Errorf("create database pool: %w", err)
+		return nil, fmt.Errorf("DATABASE: Could not create database pool: %w", err)
 	}
 
 	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -88,7 +89,7 @@ func OpenDatabase(ctx context.Context) (*Database, error) {
 
 	if err := pool.Ping(pingCtx); err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("ping database: %w", err)
+		return nil, fmt.Errorf("DATABASE: Could not ping database: %w", err)
 	}
 
 	return &Database{
@@ -119,7 +120,7 @@ func (db *Database) GetPoints(ctx context.Context) (map[int32]*PointRecord, erro
 		ORDER BY id
 	`)
 	if err != nil {
-		return nil, fmt.Errorf("query points: %w", err)
+		return nil, fmt.Errorf("DATABASE: Could not query points: %w", err)
 	}
 	defer rows.Close()
 
@@ -133,15 +134,17 @@ func (db *Database) GetPoints(ctx context.Context) (map[int32]*PointRecord, erro
 			&point.X,
 			&point.Y,
 		); err != nil {
-			return nil, fmt.Errorf("scan point: %w", err)
+			return nil, fmt.Errorf("DATABASE: Could not scan point: %w", err)
 		}
 
 		points[point.ID] = &point
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate points: %w", err)
+		return nil, fmt.Errorf("DATABASE: Could not iterate points: %w", err)
 	}
+
+	log.Printf("DATABASE: Got %d points.", len(points))
 
 	return points, nil
 }
@@ -153,15 +156,25 @@ func (db *Database) GetPoints(ctx context.Context) (map[int32]*PointRecord, erro
 func (db *Database) GetTrucks(ctx context.Context) (map[int32]*TruckRecord, error) {
 	rows, err := db.pool.Query(ctx, `
 		SELECT
-			id,
-			state,
-			x,
-			y
-		FROM trucks
-		ORDER BY id
+			t.id,
+			COALESCE(telemetry.state, 'OFFLINE'),
+			COALESCE(telemetry.x, 0),
+			COALESCE(telemetry.y, 0)
+		FROM trucks t
+		LEFT JOIN LATERAL (
+			SELECT
+				state,
+				x,
+				y
+			FROM truck_telemetry
+			WHERE truck_id = t.id
+			ORDER BY recorded_at DESC, id DESC
+			LIMIT 1
+		) telemetry ON true
+		ORDER BY t.id
 	`)
 	if err != nil {
-		return nil, fmt.Errorf("query trucks: %w", err)
+		return nil, fmt.Errorf("DATABASE: query trucks: %w", err)
 	}
 	defer rows.Close()
 
@@ -176,15 +189,17 @@ func (db *Database) GetTrucks(ctx context.Context) (map[int32]*TruckRecord, erro
 			&truck.X,
 			&truck.Y,
 		); err != nil {
-			return nil, fmt.Errorf("scan truck: %w", err)
+			return nil, fmt.Errorf("DATABASE: scan truck: %w", err)
 		}
 
 		trucks[truck.ID] = &truck
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate trucks: %w", err)
+		return nil, fmt.Errorf("DATABASE: iterate trucks: %w", err)
 	}
+
+	log.Printf("DATABASE: Got %d trucks.", len(trucks))
 
 	return trucks, nil
 }
@@ -209,7 +224,7 @@ func (db *Database) GetActiveOrders(ctx context.Context) (map[int64]*OrderRecord
 		ORDER BY created_at, id
 	`, OrderDelivered)
 	if err != nil {
-		return nil, fmt.Errorf("query active orders: %w", err)
+		return nil, fmt.Errorf("DATABASE: Could not query active orders: %w", err)
 	}
 	defer rows.Close()
 
@@ -227,15 +242,16 @@ func (db *Database) GetActiveOrders(ctx context.Context) (map[int64]*OrderRecord
 			&order.State,
 			&order.TruckID,
 		); err != nil {
-			return nil, fmt.Errorf("scan active order: %w", err)
+			return nil, fmt.Errorf("DATABASE: Could not scan active order: %w", err)
 		}
 
 		orders[order.ID] = &order
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate active orders: %w", err)
+		return nil, fmt.Errorf("DATABASE: Could not iterate active orders: %w", err)
 	}
+	log.Printf("DATABASE: Got %d active orders.", len(orders))
 
 	return orders, nil
 }
@@ -260,7 +276,7 @@ func (db *Database) GetPendingOrders(ctx context.Context) (map[int64]*OrderRecor
 		ORDER BY created_at, id
 	`, OrderPending)
 	if err != nil {
-		return nil, fmt.Errorf("query pending orders: %w", err)
+		return nil, fmt.Errorf("DATABASE: Could not query pending orders: %w", err)
 	}
 	defer rows.Close()
 
@@ -278,15 +294,17 @@ func (db *Database) GetPendingOrders(ctx context.Context) (map[int64]*OrderRecor
 			&order.State,
 			&order.TruckID,
 		); err != nil {
-			return nil, fmt.Errorf("scan pending order: %w", err)
+			return nil, fmt.Errorf("DATABASE: Could not scan pending order: %w", err)
 		}
 
 		orders[order.ID] = &order
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate pending orders: %w", err)
+		return nil, fmt.Errorf("DATABASE: Could not iterate pending orders: %w", err)
 	}
+
+	log.Printf("DATABASE: Got %d pending orders.", len(orders))
 
 	return orders, nil
 }
@@ -297,141 +315,140 @@ func (db *Database) GetPendingOrders(ctx context.Context) (map[int64]*OrderRecor
 //
 // The assignment is only successful if the order is still pending.
 // This protects against stale application state.
-func (db *Database) AssignOrder(ctx context.Context, orderID int64, truckID int32) error {
+func (db *Database) AssignOrder(ctx context.Context, orderID int64, truckID int32, eventAt time.Time) error {
 	tag, err := db.pool.Exec(ctx, `
 		UPDATE orders
 		SET
 			state = $1,
 			truck_id = $2,
-			updated_at = NOW()
-		WHERE id = $3
-		  AND state = $4
+			updated_at = $3
+		WHERE id = $4
+		  AND state = $5
 	`,
 		OrderAssigned,
 		truckID,
+		eventAt,
 		orderID,
 		OrderPending,
 	)
 	if err != nil {
-		return fmt.Errorf("assign order %d to truck %d: %w",
+		return fmt.Errorf("DATABASE: Could not assign order %d to truck %d: %w",
 			orderID, truckID, err)
 	}
 
 	if tag.RowsAffected() != 1 {
-		return fmt.Errorf(
-			"assign order %d to truck %d: order not found or not pending",
+		return fmt.Errorf("DATABASE: Could not assign order %d to truck %d: order not found or not pending",
 			orderID,
 			truckID,
 		)
 	}
+
+	log.Printf("DATABASE: Assigned order %d to truck %d.", orderID, truckID)
 
 	return nil
 }
 
 // MarkOrderPickedUp atomically transitions an order:
 //
-//	ASSIGNED -> PICKED_UP
+//  ASSIGNED -> PICKED_UP
 //
 // The truck ID must match the truck currently assigned to the order.
-func (db *Database) MarkOrderPickedUp(ctx context.Context, orderID int64, truckID int32) error {
+func (db *Database) MarkOrderPickedUp(ctx context.Context, orderID int64, truckID int32, eventAt time.Time) error {
+
 	tag, err := db.pool.Exec(ctx, `
-		UPDATE orders
-		SET
-			state = $1,
-			picked_up_at = COALESCE(picked_up_at, NOW()),
-			updated_at = NOW()
-		WHERE id = $2
-		  AND state = $3
-		  AND truck_id = $4
-	`,
+        UPDATE orders
+        SET
+            state = $1,
+            picked_up_at = COALESCE(picked_up_at, $2),
+            updated_at = $2
+        WHERE id = $3
+          AND state = $4
+          AND truck_id = $5
+    `,
 		OrderPickedUp,
+		eventAt,
 		orderID,
 		OrderAssigned,
 		truckID,
 	)
 	if err != nil {
-		return fmt.Errorf(
-			"mark order %d picked up by truck %d: %w",
+		return fmt.Errorf("DATABASE: Could not mark order %d picked up by truck %d: %w",
 			orderID,
 			truckID,
 			err,
 		)
 	}
-
 	if tag.RowsAffected() != 1 {
-		return fmt.Errorf(
-			"mark order %d picked up by truck %d: order not found, not assigned, or assigned to another truck",
+		return fmt.Errorf("DATABASE: Could not mark order %d picked up by truck %d: order not found, not assigned, or assigned to another truck",
 			orderID,
 			truckID,
 		)
 	}
-
+	log.Printf("DATABASE: Marked order %d as picked up by truck %d.", orderID, truckID)
 	return nil
 }
 
 // MarkOrderDelivered atomically transitions an order:
 //
-//	PICKED_UP -> DELIVERED
+//  PICKED_UP -> DELIVERED
 //
 // The truck ID must match the truck currently assigned to the order.
-func (db *Database) MarkOrderDelivered(ctx context.Context, orderID int64, truckID int32) error {
+func (db *Database) MarkOrderDelivered(ctx context.Context, orderID int64, truckID int32, eventAt time.Time) error {
 	tag, err := db.pool.Exec(ctx, `
-		UPDATE orders
-		SET
-			state = $1,
-			delivered_at = COALESCE(delivered_at, NOW()),
-			updated_at = NOW()
-		WHERE id = $2
-		  AND state = $3
-		  AND truck_id = $4
-	`,
+        UPDATE orders
+        SET
+            state = $1,
+            delivered_at = COALESCE(delivered_at, $2),
+            updated_at = $2
+        WHERE id = $3
+          AND state = $4
+          AND truck_id = $5
+    `,
 		OrderDelivered,
+		eventAt,
 		orderID,
 		OrderPickedUp,
 		truckID,
 	)
 	if err != nil {
-		return fmt.Errorf(
-			"mark order %d delivered by truck %d: %w",
+		return fmt.Errorf("DATABASE: Could not mark order %d delivered by truck %d: %w",
 			orderID,
 			truckID,
 			err,
 		)
 	}
-
 	if tag.RowsAffected() != 1 {
-		return fmt.Errorf(
-			"mark order %d delivered by truck %d: order not found, not picked up, or assigned to another truck",
+		return fmt.Errorf("DATABASE: Could not mark order %d delivered by truck %d: order not found, not picked up, or assigned to another truck",
 			orderID,
 			truckID,
 		)
 	}
-
+	log.Printf("DATABASE: Marked order %d as delivered by truck %d", orderID, truckID)
 	return nil
 }
 
-// UpdateTruck persists the current operational state of a truck.
-func (db *Database) UpdateTruck(ctx context.Context, truckID int32, state TruckState, x float64, y float64) error {
-	tag, err := db.pool.Exec(ctx, `
-		UPDATE trucks
-		SET
-			state = $1,
-			x = $2,
-			y = $3,
-			updated_at = NOW()
-		WHERE id = $4
-	`,
+func (db *Database) InsertTruckTelemetry(ctx context.Context, truckID int32, state TruckState, x float64, y float64, recordedAt time.Time) error {
+	_, err := db.pool.Exec(ctx, `
+        INSERT INTO truck_telemetry (
+            truck_id,
+            state,
+            x,
+            y,
+            recorded_at
+        )
+        VALUES ($1, $2, $3, $4, $5)
+    `,
+		truckID,
 		state,
 		x,
 		y,
-		truckID,
+		recordedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("update truck %d: %w", truckID, err)
-	}
-
-	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("update truck %d: truck not found", truckID)
+		return fmt.Errorf("DATABASE: Could not record telemetry for truck %d: %w",
+			truckID,
+			err,
+		)
 	}
 
 	return nil
