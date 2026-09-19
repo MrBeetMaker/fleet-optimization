@@ -311,7 +311,7 @@ func (t *Truck) drive() {
 		return
 	}
 
-	speed := 0.5
+	speed := 1.0
 	if norm < speed { // Avoid overshooting destination
 		speed = norm
 	}
@@ -319,22 +319,37 @@ func (t *Truck) drive() {
 	dx = dx * speed / norm
 	dy = dy * speed / norm
 
+	cost := speed // The cost is just the distance for now
+
+	if cost > t.battery {
+		log.Printf("Truck %d is out of battery at %2f %2f.", t.id, t.x, t.y)
+		return
+	}
+
 	t.x += dx
 	t.y += dy
-	t.battery -= speed
+	t.battery -= cost
+
+}
+
+// Sets state to offline, sends one final telemetry and closes connection.
+func (t *Truck) Disconnect() {
+	t.state = fleetpb.TruckState_OFFLINE
+	t.SendTelemetry()
+	t.conn.Close()
 }
 
 func (t *Truck) Run() {
 
-	defer t.conn.Close()
+	defer t.Disconnect()
 
 	t.Register()
 	t.state = fleetpb.TruckState_IDLE
 
-	ticker := time.NewTicker(time.Second)
+	tickDuration := time.Second
+	ticker := time.NewTicker(tickDuration)
 
 	defer ticker.Stop()
-
 	for range ticker.C {
 
 		if t.arrivedAtDestination() {
@@ -353,7 +368,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	nrOfTrucks := 1
+	nrOfTrucks := 3
 	for i := range nrOfTrucks {
 		wg.Add(1)
 		go func(i int32) {
