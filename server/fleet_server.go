@@ -73,6 +73,26 @@ func toProtoTruckState(state TruckState) fleetpb.TruckState {
 	}
 }
 
+// Help function for converting proto truck states to database records
+func toDatabaseTruckState(state fleetpb.TruckState) TruckState {
+	switch state {
+	case fleetpb.TruckState_IDLE:
+		return TruckIdle
+	case fleetpb.TruckState_DRIVING:
+		return TruckDriving
+	case fleetpb.TruckState_CHARGING:
+		return TruckCharging
+	case fleetpb.TruckState_WAITING:
+		return TruckWaiting
+	case fleetpb.TruckState_OFFLINE:
+		return TruckOffline
+	case fleetpb.TruckState_DELIVERING:
+		return TruckDelivering
+	default:
+		return TruckIdle
+	}
+}
+
 type TruckInfo struct {
 	Battery float64
 	State   fleetpb.TruckState
@@ -143,7 +163,7 @@ func NewFleetServer(db *Database, optimizer fleetpb.OptimizerServiceClient) (*Fl
 			Delivered: o.State == OrderDelivered,
 		}
 
-		// proto3 has no nullable scalar, so use 0 when TruckID is nil.
+		// proto3 has no nullable scalar, so use -1 when TruckID is nil.
 		order.TruckId = -1
 		if o.TruckID != nil {
 			order.TruckId = *o.TruckID
@@ -152,9 +172,9 @@ func NewFleetServer(db *Database, optimizer fleetpb.OptimizerServiceClient) (*Fl
 		orders[o.ID] = order
 	}
 
-	log.Printf("Retrieved %d nodes.", len(nodeMap))
-	log.Printf("Retrieved %d trucks", len(trucks))
-	log.Printf("Retrieved %d orders", len(orders))
+	log.Printf("\t* Retrieved %d nodes.", len(nodeMap))
+	log.Printf("\t* Retrieved %d trucks", len(trucks))
+	log.Printf("\t* Retrieved %d orders", len(orders))
 
 	return &FleetServer{
 		db:        db,
@@ -192,6 +212,66 @@ func (s *FleetServer) InitOptimizer() (bool, error) {
 	return resp.Success, err
 }
 
+// Retrieves and inserts pending orders from the database.
+func (s *FleetServer) GetPendingOrders() error {
+
+	s.ordersMutex.Lock()
+
+	// Retrieve orders
+	dbOrders, err := s.db.GetPendingOrders(context.Background())
+	if err != nil {
+		return fmt.Errorf("ERROR: Failed to load orders: %v", err)
+	}
+
+	orders := make(map[int64]*fleetpb.Order, len(dbOrders))
+	for _, o := range dbOrders {
+
+		if o.State != OrderPending {
+			log.Printf("WARNING: Order %d was marked as %s in the database, but returned when retrieving pending orders.", o.ID, o.State)
+			continue
+		}
+
+		// Reject orders with unknown locations; the server should retrieve the new nodes.
+		if _, dropOffExists := s.world[o.DropoffID]; !dropOffExists {
+			log.Printf("WARNING: Order %d has unknown drop off: %d.", o.ID, o.DropoffID)
+			continue
+		}
+		if _, pickUpExists := s.world[o.PickupID]; !pickUpExists {
+			log.Printf("WARNING: Order %d has unknown pick-up: %d.", o.ID, o.PickupID)
+			continue
+		}
+
+		order := &fleetpb.Order{
+			Id:        o.ID,
+			Weight:    float32(o.Weight),
+			Size:      o.Size,
+			PickUp:    o.PickupID,
+			DropOff:   o.DropoffID,
+			PickedUp:  o.State == OrderPickedUp || o.State == OrderDelivered,
+			Delivered: o.State == OrderDelivered,
+		}
+
+		// Use -1 when TruckID is nil.
+		order.TruckId = -1
+		if o.TruckID != nil {
+			order.TruckId = *o.TruckID
+		}
+
+		// If the order has already been retrieved, then we don't want to overwrite it.
+		// The server is responsible for holding the current state, and send updates to the database.
+		if _, exists := s.orders[o.ID]; !exists {
+			orders[o.ID] = order
+		} else {
+			log.Printf("Order %d already exists in orders.", o.ID)
+		}
+	}
+
+	s.ordersMutex.Unlock()
+
+	return nil
+
+}
+
 func (s *FleetServer) RunPeriodicRoutePlanning() {
 
 	success, err := s.InitOptimizer()
@@ -209,6 +289,9 @@ func (s *FleetServer) RunPeriodicRoutePlanning() {
 	defer ticker.Stop()
 
 	for range ticker.C {
+
+		s.GetPendingOrders()
+
 		s.createRoutes()
 	}
 }
@@ -216,7 +299,7 @@ func (s *FleetServer) RunPeriodicRoutePlanning() {
 // Send a request for route creation to the optimizer service.
 // Aborts if no trucks are available
 func (s *FleetServer) createRoutes() {
-	maxWaitDuration := 18 * time.Second
+	maxWaitDuration := 45 * time.Second
 
 	s.ordersMutex.RLock()
 	total := len(s.orders)
@@ -233,8 +316,8 @@ func (s *FleetServer) createRoutes() {
 
 	s.ordersMutex.RUnlock()
 
+	log.Printf("Found %d pending orders...", len(orders))
 	if len(orders) == 0 {
-		log.Printf("Found %d pending orders.", len(orders))
 		return
 	}
 
@@ -256,6 +339,7 @@ func (s *FleetServer) createRoutes() {
 		log.Printf("Can't create routes: found %d trucks, but %d are online.", found, nrOfTrucks)
 		return
 	}
+	log.Printf("Found %d available trucks.", nrOfTrucks)
 
 	ctx, cancel := context.WithTimeout(context.Background(), maxWaitDuration)
 	defer cancel()
@@ -433,6 +517,11 @@ func (s *FleetServer) assignRoutes(routes map[int32]*fleetpb.Route, orderIds map
 			if order, exists := s.orders[orderId]; exists {
 				order.TruckId = assignment.truckId
 				orders = append(orders, order)
+
+				err := s.db.AssignOrder(context.Background(), orderId, order.TruckId)
+				if err != nil {
+					log.Printf("ERROR: Could not update database with order %d assigned to truck %d: %v", orderId, order.TruckId, err)
+				}
 			}
 		}
 		s.ordersMutex.Unlock()
@@ -503,6 +592,13 @@ func (s *FleetServer) RequestPickup(ctx context.Context, req *fleetpb.PickUpRequ
 
 	log.Printf("Truck %d requested pick-up of order %d at node %d: %t", req.TruckId, req.OrderId, req.NodeId, accepted)
 
+	if accepted {
+		err := s.db.MarkOrderPickedUp(ctx, req.OrderId, order.TruckId)
+		if err != nil {
+			log.Printf("ERROR: Could not mark order %d as picked up by truck %d on the database: %v", req.OrderId, req.TruckId, err)
+		}
+	}
+
 	return &fleetpb.PickUpResponse{
 		Accepted: accepted,
 	}, nil
@@ -524,6 +620,13 @@ func (s *FleetServer) RequestDelivery(ctx context.Context, req *fleetpb.DeliverR
 	accepted := nodeExists && orderExists && truckExists && dropOffIsAtNode
 
 	log.Printf("Truck %d requested delivery of order %d at node %d: %t", req.TruckId, req.OrderId, req.NodeId, accepted)
+
+	if accepted {
+		err := s.db.MarkOrderDelivered(ctx, req.OrderId, order.TruckId)
+		if err != nil {
+			log.Printf("ERROR: Could not mark order %d as picked up by truck %d on the database: %v", req.OrderId, req.TruckId, err)
+		}
+	}
 
 	return &fleetpb.DeliverResponse{
 		Accepted: accepted,
@@ -575,6 +678,15 @@ func (s *FleetServer) SendTelemetry(ctx context.Context, t *fleetpb.Telemetry) (
 	}
 
 	s.truckMutex.Unlock()
+
+	// Update database. In the future, this may be moved to a que and handled separately
+	if truckExists {
+		err := s.db.UpdateTruck(ctx, t.TruckId, toDatabaseTruckState(t.State), t.X, t.Y)
+
+		if err != nil {
+			log.Printf("ERROR: Could not update Truck %d in database: %v", t.TruckId, err)
+		}
+	}
 
 	if command := s.popCommand(t.TruckId); truckExists && command != nil {
 		return command, nil
