@@ -200,6 +200,9 @@ class OptimizerService(optim_pb2_grpc.OptimizerServiceServicer):
 
                 route.append(compressed_indx_to_node[manager.IndexToNode(index)])
 
+                # Remove consecutive duplicates
+                route = [node for i, node in enumerate(route) if i == 0 or node != route[i - 1]]
+
                 routes.update({vehicle_id: fleet_pb2.Route(nodes=route)})
                 print(f"Vehicle {vehicle_id}: {route}")
 
