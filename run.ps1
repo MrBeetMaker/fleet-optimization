@@ -4,7 +4,7 @@ $python = "$PSScriptRoot\.venv\Scripts\python.exe"
 
 function Wait-ForPort($port) {
     while (-not (Test-NetConnection localhost -Port $port -InformationLevel Quiet)) {
-        Start-Sleep -Milliseconds 500
+        Start-Sleep -Milliseconds 100
     }
 }
 
