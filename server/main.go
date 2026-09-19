@@ -33,46 +33,40 @@ func retry[T any](fn func() (T, error), maxRetries int, backoffDuration time.Dur
 }
 
 func loadEnvironment() {
-	log.Print("Loading environment: ")
+	log.Print("Loading environment.")
 	godotenv.Load()
-	log.Print("Success.")
 }
 
 func connectDatabase(maxRetries int, backoffDuration time.Duration) *Database {
-	log.Print("Connecting to database: ")
+	log.Print("Connecting to database.")
 
 	db, err := retry(func() (*Database, error) { return OpenDatabase(context.Background()) }, maxRetries, backoffDuration)
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
-
-	log.Print("Success.")
 	return db
 }
 
 func startListener(maxRetries int, backoffDuration time.Duration) net.Listener {
-	log.Print("Starting TCP listener on :50051: ")
+	log.Print("Starting TCP listener on :50051.")
 
 	lis, err := retry(func() (net.Listener, error) { return net.Listen("tcp", ":50051") }, maxRetries, backoffDuration)
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
-
-	log.Print("Success.")
 	return lis
 }
 
 func connectOptimizer(maxRetries int, backoffDuration time.Duration) (*grpc.ClientConn, fleetpb.OptimizerServiceClient) {
-	log.Print("Connecting to optimizer service: ")
+	log.Print("Connecting to optimizer service.")
 
 	optimizerConn, err := retry(func() (*grpc.ClientConn, error) {
 		return grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}, maxRetries, backoffDuration)
 	if err != nil {
-		log.Fatalf("ERROR: %v", err)
+		log.Fatalf("\nERROR: %v", err)
 	}
 
-	log.Print("Success.")
 	return optimizerConn, fleetpb.NewOptimizerServiceClient(optimizerConn)
 }
 
@@ -81,10 +75,8 @@ func createFleetServer(db *Database, optimizerClient fleetpb.OptimizerServiceCli
 
 	fleetServer, err := retry(func() (*FleetServer, error) { return NewFleetServer(db, optimizerClient) }, maxRetries, backoffDuration)
 	if err != nil {
-		log.Fatalf("ERROR: %v", err)
+		log.Fatalf("\nERROR: %v", err)
 	}
-
-	log.Print("Success.")
 	return fleetServer
 }
 
@@ -105,21 +97,18 @@ func main() {
 	optimizerConn, optimizerClient := connectOptimizer(maxRetries, backoffDuration)
 	defer optimizerConn.Close()
 
-	log.Print("Creating gRPC server: ")
+	log.Print("Creating gRPC server.")
 	grpcServer := grpc.NewServer()
-	log.Print("Success.")
 
 	fleetServer := createFleetServer(db, optimizerClient, maxRetries, backoffDuration)
 
-	log.Print("Registering fleet service: ")
+	log.Print("Registering fleet service.")
 	fleetpb.RegisterFleetServiceServer(grpcServer, fleetServer)
-	log.Print("Success.")
 
-	log.Print("Starting periodic route planning: ")
+	log.Print("Starting periodic route planning.")
 	go fleetServer.RunPeriodicRoutePlanning()
-	log.Print("Success.")
 
-	log.Print("Starting gRPC server: ")
+	log.Print("Starting gRPC server.")
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Printf("ERROR: %v", err)
 		log.Fatal(err)
