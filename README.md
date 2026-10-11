@@ -34,12 +34,12 @@ The goal of this project is to build a realistic logistics backend inspired by m
 * [x] Go gRPC server
 * [x] Truck registration
 * [x] Telemetry system
-* [ ] World model
-* [ ] PostgreSQL integration
-* [ ] Python optimization service
-* [ ] OR-Tools scheduling
-* [ ] XGBoost prediction models
+* [x] PostgreSQL integration
+* [x] Python optimization service
+* [x] OR-Tools scheduling
 * [ ] Web interface
+* [ ] XGBoost prediction models
+* [ ] World model
 * [ ] Docker Compose
 
 ## Project structure
